@@ -1,0 +1,21 @@
+:root {
+  /* Background */
+  --color-bg: #121212;
+  --color-bg-elevated: #1e1e1e;
+
+  /* Text */
+  --color-text: #ffffff;
+  --color-text-secondary: #a8a8a8;
+
+  /* Accent (TikTok red/cyan) */
+  --color-accent-red: #fe2c55;
+  --color-accent-cyan: #25f4ee;
+
+  /* Spacing scale */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+}
