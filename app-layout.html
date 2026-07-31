@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="App shell layout: top bar, side navigation, scrolling video feed, and a suggestions sidebar.">
+  <title>Feed — App Layout</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+
+      --color-bg: #121212;
+      --color-bg-elevated: #1e1e1e;
+      --color-bg-raised: #262626;
+      --color-text: #ffffff;
+      --color-text-secondary: #a8a8a8;
+      --color-border: rgba(255, 255, 255, 0.08);
+
+      --color-accent-red: #fe2c55;
+      --color-accent-cyan: #25f4ee;
+
+      --space-xs: 0.25rem;
+      --space-sm: 0.5rem;
+      --space-md: 1rem;
+      --space-lg: 1.5rem;
+      --space-xl: 2rem;
+      --space-2xl: 3rem;
+
+      --radius: 12px;
+      --radius-pill: 999px;
+
+      --topbar-height: 64px;
+      --sidenav-width: 240px;
+      --sidenav-width-collapsed: 76px;
+      --sidepanel-width: 300px;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body,
+    h1,
+    h2,
+    h3,
+    p,
+    ul,
+    figure {
+      margin: 0;
+    }
+
+    ul {
+      padding: 0;
+      list-style: none;
+    }
+
+    button {
+      font: inherit;
+      color: inherit;
+      background: none;
+      border: 0;
+      cursor: pointer;
+    }
+
+    input {
+      font: inherit;
+      color: inherit;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      font-family: var(--font-sans);
+      color: var(--color-text);
+      background-color: var(--color-bg);
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--color-accent-cyan);
+      outline-offset: 2px;
+    }
+
+    /* ---------- Top bar ---------- */
+    .topbar {
+      flex: 0 0 var(--topbar-height);
+      display: grid;
+      grid-template-columns: var(--sidenav-width) minmax(0, 640px) var(--sidenav-width);
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-md);
+      padding-inline: var(--space-lg);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .topbar-logo {
+      display: flex;
+      align-items: center;
+      font-weight: 800;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+
+    .topbar-logo .accent {
+      color: var(--color-accent-red);
+      text-shadow: -2px 0 var(--color-accent-cyan);
+    }
+
+    .topbar-search {
+      justify-self: center;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      padding-inline: var(--space-md);
+      height: 44px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-pill);
+      background-color: var(--color-bg-elevated);
+      transition: border-color 0.15s ease;
+    }
+
+    .topbar-search:focus-within {
+      border-color: var(--color-accent-cyan);
+    }
+
+    .topbar-search svg {
+      flex: none;
+      color: var(--color-text-secondary);
+    }
+
+    .topbar-search input {
+      flex: 1;
+      min-width: 0;
+      background: none;
+      border: 0;
+      outline: 0;
+      font-size: 0.95rem;
+    }
+
+    .topbar-search input::placeholder {
+      color: var(--color-text-secondary);
+    }
+
+    .topbar-actions {
+      justify-self: end;
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .icon-button {
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+      height: 40px;
+      padding-inline: var(--space-md);
+      border-radius: var(--radius-pill);
+      font-weight: 600;
+      font-size: 0.9rem;
+      background-color: var(--color-bg-elevated);
+      border: 1px solid var(--color-border);
+      transition: border-color 0.15s ease;
+    }
+
+    .icon-button:hover {
+      border-color: var(--color-accent-cyan);
+    }
+
+    .avatar-button {
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--color-accent-red), var(--color-accent-cyan));
+    }
+
+    .avatar-button svg {
+      width: 20px;
+      height: 20px;
+      color: var(--color-bg);
+    }
+
+    /* ---------- App shell ---------- */
+    .app-shell {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+    }
+
+    /* ---------- Side navigation (fixed in place) ---------- */
+    .side-nav {
+      flex: 0 0 var(--sidenav-width);
+      overflow-y: auto;
+      padding: var(--space-lg);
+      border-right: 1px solid var(--color-border);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-lg);
+    }
+
+    .side-nav-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+
+    .side-nav-link {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-sm) var(--space-md);
+      border-radius: var(--radius);
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--color-text);
+    }
+
+    .side-nav-link svg {
+      flex: none;
+      color: var(--color-text-secondary);
+    }
+
+    .side-nav-link:hover {
+      background-color: var(--color-bg-elevated);
+    }
+
+    .side-nav-link.is-active {
+      background-color: var(--color-bg-elevated);
+    }
+
+    .side-nav-link.is-active svg {
+      color: var(--color-accent-cyan);
+    }
+
+    .side-nav-divider {
+      height: 1px;
+      background-color: var(--color-border);
+    }
+
+    .side-nav-heading {
+      padding-inline: var(--space-md);
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-text-secondary);
+    }
+
+    .side-nav-account {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-xs) var(--space-md);
+      border-radius: var(--radius);
+    }
+
+    .side-nav-account:hover {
+      background-color: var(--color-bg-elevated);
+    }
+
+    .account-avatar {
+      flex: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--color-bg);
+      background: linear-gradient(135deg, var(--color-accent-cyan), var(--color-accent-red));
+    }
+
+    .account-name {
+      font-size: 0.9rem;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ---------- Main video feed (fills remaining space, scrolls) ---------- */
+    .feed {
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow-y: auto;
+      scroll-snap-type: y mandatory;
+      background-color: #000000;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .feed {
+        scroll-behavior: smooth;
+      }
+    }
+
+    .video-card {
+      position: relative;
+      height: 100%;
+      min-height: 480px;
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+      display: flex;
+      align-items: flex-end;
+      background-image: var(--card-art);
+      background-size: cover;
+      background-position: center;
+    }
+
+    .video-card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.75), transparent 45%);
+      pointer-events: none;
+    }
+
+    .video-info {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      min-width: 0;
+      padding: var(--space-xl);
+      padding-right: 6rem;
+    }
+
+    .video-user {
+      font-weight: 700;
+    }
+
+    .video-caption {
+      margin-top: var(--space-xs);
+      color: rgba(255, 255, 255, 0.85);
+      max-width: 42ch;
+    }
+
+    .video-actions {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-lg);
+      padding: var(--space-xl) var(--space-lg);
+    }
+
+    .video-action {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-xs);
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .video-action svg {
+      width: 30px;
+      height: 30px;
+    }
+
+    .video-action.is-liked svg {
+      color: var(--color-accent-red);
+    }
+
+    /* ---------- Suggestions sidebar ---------- */
+    .side-panel {
+      flex: 0 0 var(--sidepanel-width);
+      overflow-y: auto;
+      padding: var(--space-lg);
+      border-left: 1px solid var(--color-border);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    .side-panel h2 {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-text-secondary);
+    }
+
+    .suggestion-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    .suggestion {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .suggestion-avatar {
+      flex: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--color-bg);
+      background: linear-gradient(135deg, var(--color-accent-red), var(--color-accent-cyan));
+    }
+
+    .suggestion-identity {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .suggestion-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .suggestion-meta {
+      font-size: 0.8rem;
+      color: var(--color-text-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .follow-button {
+      flex: none;
+      padding: var(--space-xs) var(--space-md);
+      border-radius: var(--radius-pill);
+      font-size: 0.8rem;
+      font-weight: 700;
+      background-color: var(--color-accent-red);
+      color: #ffffff;
+    }
+
+    .follow-button:hover {
+      filter: brightness(1.08);
+    }
+
+    /* ---------- Responsive ---------- */
+    @media (max-width: 1180px) {
+      .topbar {
+        grid-template-columns: var(--sidenav-width-collapsed) minmax(0, 480px) auto;
+      }
+
+      .side-panel {
+        display: none;
+      }
+    }
+
+    @media (max-width: 820px) {
+      .topbar {
+        grid-template-columns: var(--sidenav-width-collapsed) 1fr auto;
+      }
+
+      .side-nav {
+        flex-basis: var(--sidenav-width-collapsed);
+        align-items: center;
+      }
+
+      .side-nav-link span,
+      .side-nav-heading,
+      .account-name,
+      .side-nav-divider {
+        display: none;
+      }
+
+      .side-nav-link {
+        padding: var(--space-sm);
+      }
+
+      .icon-button span {
+        display: none;
+      }
+
+      .icon-button {
+        padding-inline: var(--space-sm);
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="topbar-logo" href="/" aria-label="Home">Tik<span class="accent">Tok</span></a>
+
+    <form class="topbar-search" role="search" aria-label="Search">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="search" name="q" placeholder="Search accounts and videos" aria-label="Search accounts and videos">
+    </form>
+
+    <div class="topbar-actions">
+      <button class="icon-button" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><rect x="3" y="15" width="18" height="6" rx="1.5"/></svg>
+        <span>Upload</span>
+      </button>
+      <button class="avatar-button" type="button" aria-label="Your profile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="app-shell">
+    <nav class="side-nav" aria-label="Primary">
+      <ul class="side-nav-list">
+        <li>
+          <a class="side-nav-link is-active" href="#for-you">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+            <span>For You</span>
+          </a>
+        </li>
+        <li>
+          <a class="side-nav-link" href="#following">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span>Following</span>
+          </a>
+        </li>
+        <li>
+          <a class="side-nav-link" href="#explore">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m15 9-2 6-6 2 2-6z"/></svg>
+            <span>Explore</span>
+          </a>
+        </li>
+        <li>
+          <a class="side-nav-link" href="#live">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="m22 8-6 4 6 4z"/></svg>
+            <span>LIVE</span>
+          </a>
+        </li>
+      </ul>
+
+      <div class="side-nav-divider" role="separator"></div>
+
+      <div>
+        <p class="side-nav-heading">Following</p>
+        <ul class="side-nav-list">
+          <li>
+            <a class="side-nav-account" href="#">
+              <span class="account-avatar">RM</span>
+              <span class="account-name">rivermkr</span>
+            </a>
+          </li>
+          <li>
+            <a class="side-nav-account" href="#">
+              <span class="account-avatar">JT</span>
+              <span class="account-name">jointhetrail</span>
+            </a>
+          </li>
+          <li>
+            <a class="side-nav-account" href="#">
+              <span class="account-avatar">CO</span>
+              <span class="account-name">coldbrewclub</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <main class="feed" aria-label="Video feed">
+      <section class="video-card" style="--card-art: linear-gradient(160deg, #3a1c71, #12121200)">
+        <div class="video-info">
+          <p class="video-user">@rivermkr</p>
+          <p class="video-caption">sunrise paddle before the wind picks up 🌅</p>
+        </div>
+        <div class="video-actions">
+          <button class="video-action is-liked" type="button" aria-label="Like, 128 thousand likes">
+            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 21s-7.5-4.6-10-9.3C.4 8.2 2.3 4.5 6 4.1c2-.2 3.9.8 6 3 2.1-2.2 4-3.2 6-3 3.7.4 5.6 4.1 4 7.6C19.5 16.4 12 21 12 21z"/></svg>
+            <span>128K</span>
+          </button>
+          <button class="video-action" type="button" aria-label="Comments, 842">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span>842</span>
+          </button>
+          <button class="video-action" type="button" aria-label="Share">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v14"/></svg>
+            <span>Share</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="video-card" style="--card-art: linear-gradient(160deg, #0f2027, #12121200)">
+        <div class="video-info">
+          <p class="video-user">@jointhetrail</p>
+          <p class="video-caption">this switchback took us three hours, worth it</p>
+        </div>
+        <div class="video-actions">
+          <button class="video-action" type="button" aria-label="Like, 54 thousand likes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.6-10-9.3C.4 8.2 2.3 4.5 6 4.1c2-.2 3.9.8 6 3 2.1-2.2 4-3.2 6-3 3.7.4 5.6 4.1 4 7.6C19.5 16.4 12 21 12 21z"/></svg>
+            <span>54K</span>
+          </button>
+          <button class="video-action" type="button" aria-label="Comments, 301">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span>301</span>
+          </button>
+          <button class="video-action" type="button" aria-label="Share">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v14"/></svg>
+            <span>Share</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="video-card" style="--card-art: linear-gradient(160deg, #1f4037, #12121200)">
+        <div class="video-info">
+          <p class="video-user">@coldbrewclub</p>
+          <p class="video-caption">48-hour cold brew, taste test at the end</p>
+        </div>
+        <div class="video-actions">
+          <button class="video-action" type="button" aria-label="Like, 9 thousand likes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.6-10-9.3C.4 8.2 2.3 4.5 6 4.1c2-.2 3.9.8 6 3 2.1-2.2 4-3.2 6-3 3.7.4 5.6 4.1 4 7.6C19.5 16.4 12 21 12 21z"/></svg>
+            <span>9K</span>
+          </button>
+          <button class="video-action" type="button" aria-label="Comments, 118">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span>118</span>
+          </button>
+          <button class="video-action" type="button" aria-label="Share">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v14"/></svg>
+            <span>Share</span>
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <aside class="side-panel" aria-label="Suggested accounts">
+      <h2>Suggested accounts</h2>
+      <ul class="suggestion-list">
+        <li class="suggestion">
+          <span class="suggestion-avatar">NL</span>
+          <span class="suggestion-identity">
+            <span class="suggestion-name">nightlaps</span>
+            <span class="suggestion-meta">Followed by rivermkr</span>
+          </span>
+          <button class="follow-button" type="button">Follow</button>
+        </li>
+        <li class="suggestion">
+          <span class="suggestion-avatar">PF</span>
+          <span class="suggestion-identity">
+            <span class="suggestion-name">porchfixes</span>
+            <span class="suggestion-meta">1.2M followers</span>
+          </span>
+          <button class="follow-button" type="button">Follow</button>
+        </li>
+        <li class="suggestion">
+          <span class="suggestion-avatar">SD</span>
+          <span class="suggestion-identity">
+            <span class="suggestion-name">smalldesks</span>
+            <span class="suggestion-meta">Followed by jointhetrail</span>
+          </span>
+          <button class="follow-button" type="button">Follow</button>
+        </li>
+        <li class="suggestion">
+          <span class="suggestion-avatar">QK</span>
+          <span class="suggestion-identity">
+            <span class="suggestion-name">quietkitchen</span>
+            <span class="suggestion-meta">340K followers</span>
+          </span>
+          <button class="follow-button" type="button">Follow</button>
+        </li>
+      </ul>
+    </aside>
+  </div>
+</body>
+</html>
