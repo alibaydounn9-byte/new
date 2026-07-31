@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A dark, TikTok-styled HTML5 starter page.">
+  <title>TikTok Dark Theme Boilerplate</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+
+      /* Background */
+      --color-bg: #121212;
+      --color-bg-elevated: #1e1e1e;
+
+      /* Text */
+      --color-text: #ffffff;
+      --color-text-secondary: #a8a8a8;
+
+      /* Accent (TikTok red/cyan) */
+      --color-accent-red: #fe2c55;
+      --color-accent-cyan: #25f4ee;
+
+      /* Spacing scale */
+      --space-xs: 0.25rem;
+      --space-sm: 0.5rem;
+      --space-md: 1rem;
+      --space-lg: 1.5rem;
+      --space-xl: 2rem;
+      --space-2xl: 3rem;
+
+      --radius: 12px;
+      --max-width: 68rem;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    body,
+    h1,
+    h2,
+    h3,
+    p,
+    ul {
+      margin: 0;
+    }
+
+    ul {
+      padding: 0;
+      list-style: none;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      color: var(--color-text);
+      background-color: var(--color-bg);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a {
+      color: var(--color-text);
+      text-decoration: none;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--color-accent-cyan);
+      outline-offset: 3px;
+    }
+
+    .site-header,
+    main,
+    .site-footer {
+      max-width: var(--max-width);
+      margin-inline: auto;
+      padding-inline: var(--space-lg);
+    }
+
+    section {
+      padding-block: var(--space-2xl);
+    }
+
+    section + section {
+      border-top: 1px solid var(--color-bg-elevated);
+    }
+
+    /* Header */
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-sm);
+      padding-block: var(--space-lg);
+    }
+
+    .brand {
+      font-weight: 800;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+
+    .brand span {
+      color: var(--color-accent-red);
+      text-shadow: -2px 0 var(--color-accent-cyan);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: var(--space-lg);
+    }
+
+    .nav-links a {
+      color: var(--color-text-secondary);
+      font-weight: 500;
+    }
+
+    .nav-links a:hover {
+      color: var(--color-text);
+    }
+
+    /* Hero */
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.25rem);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      max-width: 20ch;
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      background: linear-gradient(90deg, var(--color-accent-red), var(--color-accent-cyan));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .hero p {
+      max-width: 42ch;
+      margin-block: var(--space-md) var(--space-xl);
+      font-size: 1.125rem;
+      color: var(--color-text-secondary);
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-sm);
+      padding: 0.8rem 1.6rem;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--color-accent-red), var(--color-accent-cyan));
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .button:hover,
+    .button:focus-visible {
+      filter: brightness(1.08);
+    }
+
+    /* Feature grid */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+      gap: var(--space-lg);
+      margin-top: var(--space-lg);
+    }
+
+    .features li {
+      padding: var(--space-lg);
+      border-radius: var(--radius);
+      background-color: var(--color-bg-elevated);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: border-color 0.2s ease;
+    }
+
+    .features li:hover {
+      border-color: var(--color-accent-cyan);
+    }
+
+    .features h3 {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--color-accent-cyan);
+    }
+
+    .features p {
+      margin-top: var(--space-xs);
+      color: var(--color-text-secondary);
+    }
+
+    /* Footer */
+    .site-footer {
+      padding-block: var(--space-lg);
+      border-top: 1px solid var(--color-bg-elevated);
+      color: var(--color-text-secondary);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav" aria-label="Main">
+      <a class="brand" href="/">Tik<span>Tok</span> Theme</a>
+      <ul class="nav-links">
+        <li><a href="#about">About</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" id="about">
+      <h1>Build something <em>bold.</em></h1>
+      <p>A dark, high-contrast starting point styled after TikTok's red-and-cyan brand palette.</p>
+      <a class="button" href="#features">Get started</a>
+    </section>
+
+    <section id="features">
+      <h2>Features</h2>
+      <ul class="features">
+        <li>
+          <h3>Dark by default</h3>
+          <p>Near-black background with an elevated surface tone for cards and panels.</p>
+        </li>
+        <li>
+          <h3>Signature accent</h3>
+          <p>TikTok's red and cyan brand colors, applied to gradients, links, and highlights.</p>
+        </li>
+        <li>
+          <h3>Consistent spacing</h3>
+          <p>A 4px-based spacing scale from xs to 2xl keeps rhythm consistent site-wide.</p>
+        </li>
+      </ul>
+    </section>
+
+    <section id="contact">
+      <h2>Contact</h2>
+      <p>Replace this section with your own content.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>&copy; 2026 TikTok Theme. All rights reserved.</p>
+  </footer>
+</body>
+</html>
