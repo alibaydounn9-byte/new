@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Video Post component: full-viewport video with a right-side action rail, snapping into place on scroll.">
+  <title>Video Post Component</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+
+      --color-bg: #121212;
+      --color-text: #ffffff;
+      --color-text-secondary: #a8a8a8;
+      --color-border: rgba(255, 255, 255, 0.08);
+
+      --color-accent-red: #fe2c55;
+      --color-accent-cyan: #25f4ee;
+
+      --space-xs: 0.25rem;
+      --space-sm: 0.5rem;
+      --space-md: 1rem;
+      --space-lg: 1.5rem;
+      --space-xl: 2rem;
+
+      --topbar-height: 64px;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body,
+    h1,
+    p {
+      margin: 0;
+    }
+
+    button {
+      font: inherit;
+      color: inherit;
+      background: none;
+      border: 0;
+      cursor: pointer;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      color: var(--color-text);
+      background-color: var(--color-bg);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--color-accent-cyan);
+      outline-offset: 2px;
+    }
+
+    /* ---------- Top bar ---------- */
+    .topbar {
+      height: var(--topbar-height);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-inline: var(--space-lg);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .topbar-logo {
+      font-weight: 800;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+
+    .topbar-logo .accent {
+      color: var(--color-accent-red);
+      text-shadow: -2px 0 var(--color-accent-cyan);
+    }
+
+    /* ---------- Feed (scroll container) ---------- */
+    .feed {
+      height: calc(100vh - var(--topbar-height));
+      overflow-y: auto;
+      scroll-snap-type: y mandatory;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .feed {
+        scroll-behavior: smooth;
+      }
+    }
+
+    /* ---------- Video Post component ---------- */
+    .video-post {
+      position: relative;
+      height: calc(100vh - var(--topbar-height));
+      overflow: hidden;
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+      background-color: #000000;
+    }
+
+    .video-post__media {
+      position: absolute;
+      inset: 0;
+    }
+
+    .video-post__video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      display: block;
+      background-color: #000000;
+    }
+
+    .video-post__scrim {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.75), transparent 40%);
+      pointer-events: none;
+    }
+
+    .video-post__overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: flex-end;
+      pointer-events: none;
+    }
+
+    .video-post__meta {
+      flex: 1;
+      min-width: 0;
+      padding: var(--space-xl);
+      padding-right: 5.5rem;
+      pointer-events: auto;
+    }
+
+    .video-post__user {
+      font-weight: 700;
+    }
+
+    .video-post__caption {
+      margin-top: var(--space-xs);
+      color: rgba(255, 255, 255, 0.85);
+      max-width: 42ch;
+    }
+
+    /* Right-side interaction rail */
+    .video-post__actions {
+      position: absolute;
+      right: var(--space-lg);
+      bottom: var(--space-xl);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-lg);
+      pointer-events: auto;
+    }
+
+    .video-post__profile {
+      position: relative;
+    }
+
+    .video-post__avatar {
+      display: flex;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 2px solid var(--color-text);
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--color-bg);
+      background: linear-gradient(135deg, var(--color-accent-red), var(--color-accent-cyan));
+    }
+
+    .video-post__follow {
+      position: absolute;
+      bottom: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background-color: var(--color-accent-red);
+      color: #ffffff;
+      font-size: 0.75rem;
+      line-height: 18px;
+      text-align: center;
+    }
+
+    .video-post__action {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-xs);
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .video-post__action svg {
+      width: 30px;
+      height: 30px;
+    }
+
+    .video-post__action.is-liked svg {
+      color: var(--color-accent-red);
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <span class="topbar-logo">Tik<span class="accent">Tok</span></span>
+  </header>
+
+  <main class="feed" aria-label="Video feed">
+    <article class="video-post">
+      <div class="video-post__media">
+        <video
+          class="video-post__video"
+          src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+          poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='700'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='1' x2='1' y2='0'%3E%3Cstop offset='0' stop-color='%233a1c71'/%3E%3Cstop offset='1' stop-color='%23121212'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='400' height='700' fill='url(%23g)'/%3E%3C/svg%3E"
+          muted
+          loop
+          playsinline
+          autoplay
+          preload="metadata"
+          aria-label="Video posted by rivermkr: sunrise paddle before the wind picks up"
+        ></video>
+      </div>
+      <div class="video-post__scrim"></div>
+      <div class="video-post__overlay">
+        <div class="video-post__meta">
+          <p class="video-post__user">@rivermkr</p>
+          <p class="video-post__caption">sunrise paddle before the wind picks up 🌅</p>
+        </div>
+      </div>
+      <div class="video-post__actions">
+        <button class="video-post__profile" type="button" aria-label="View rivermkr's profile and follow">
+          <span class="video-post__avatar">RM</span>
+          <span class="video-post__follow" aria-hidden="true">+</span>
+        </button>
+        <button class="video-post__action is-liked" type="button" aria-label="Like, 128 thousand likes">
+          <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 21s-7.5-4.6-10-9.3C.4 8.2 2.3 4.5 6 4.1c2-.2 3.9.8 6 3 2.1-2.2 4-3.2 6-3 3.7.4 5.6 4.1 4 7.6C19.5 16.4 12 21 12 21z"/></svg>
+          <span>128K</span>
+        </button>
+        <button class="video-post__action" type="button" aria-label="Comments, 842">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>842</span>
+        </button>
+        <button class="video-post__action" type="button" aria-label="Share">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v14"/></svg>
+          <span>Share</span>
+        </button>
+      </div>
+    </article>
+
+    <article class="video-post">
+      <div class="video-post__media">
+        <video
+          class="video-post__video"
+          src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/friday.mp4"
+          poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='700'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='1' x2='1' y2='0'%3E%3Cstop offset='0' stop-color='%230f2027'/%3E%3Cstop offset='1' stop-color='%23121212'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='400' height='700' fill='url(%23g)'/%3E%3C/svg%3E"
+          muted
+          loop
+          playsinline
+          preload="metadata"
+          aria-label="Video posted by jointhetrail: this switchback took us three hours"
+        ></video>
+      </div>
+      <div class="video-post__scrim"></div>
+      <div class="video-post__overlay">
+        <div class="video-post__meta">
+          <p class="video-post__user">@jointhetrail</p>
+          <p class="video-post__caption">this switchback took us three hours, worth it</p>
+        </div>
+      </div>
+      <div class="video-post__actions">
+        <button class="video-post__profile" type="button" aria-label="View jointhetrail's profile and follow">
+          <span class="video-post__avatar">JT</span>
+          <span class="video-post__follow" aria-hidden="true">+</span>
+        </button>
+        <button class="video-post__action" type="button" aria-label="Like, 54 thousand likes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.6-10-9.3C.4 8.2 2.3 4.5 6 4.1c2-.2 3.9.8 6 3 2.1-2.2 4-3.2 6-3 3.7.4 5.6 4.1 4 7.6C19.5 16.4 12 21 12 21z"/></svg>
+          <span>54K</span>
+        </button>
+        <button class="video-post__action" type="button" aria-label="Comments, 301">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>301</span>
+        </button>
+        <button class="video-post__action" type="button" aria-label="Share">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v14"/></svg>
+          <span>Share</span>
+        </button>
+      </div>
+    </article>
+
+    <article class="video-post">
+      <div class="video-post__media">
+        <video
+          class="video-post__video"
+          src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/running.mp4"
+          poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='700'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='1' x2='1' y2='0'%3E%3Cstop offset='0' stop-color='%231f4037'/%3E%3Cstop offset='1' stop-color='%23121212'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='400' height='700' fill='url(%23g)'/%3E%3C/svg%3E"
+          muted
+          loop
+          playsinline
+          preload="metadata"
+          aria-label="Video posted by coldbrewclub: 48-hour cold brew taste test"
+        ></video>
+      </div>
+      <div class="video-post__scrim"></div>
+      <div class="video-post__overlay">
+        <div class="video-post__meta">
+          <p class="video-post__user">@coldbrewclub</p>
+          <p class="video-post__caption">48-hour cold brew, taste test at the end</p>
+        </div>
+      </div>
+      <div class="video-post__actions">
+        <button class="video-post__profile" type="button" aria-label="View coldbrewclub's profile and follow">
+          <span class="video-post__avatar">CB</span>
+          <span class="video-post__follow" aria-hidden="true">+</span>
+        </button>
+        <button class="video-post__action" type="button" aria-label="Like, 9 thousand likes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.6-10-9.3C.4 8.2 2.3 4.5 6 4.1c2-.2 3.9.8 6 3 2.1-2.2 4-3.2 6-3 3.7.4 5.6 4.1 4 7.6C19.5 16.4 12 21 12 21z"/></svg>
+          <span>9K</span>
+        </button>
+        <button class="video-post__action" type="button" aria-label="Comments, 118">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>118</span>
+        </button>
+        <button class="video-post__action" type="button" aria-label="Share">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v14"/></svg>
+          <span>Share</span>
+        </button>
+      </div>
+    </article>
+  </main>
+</body>
+</html>
