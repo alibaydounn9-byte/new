@@ -106,7 +106,7 @@
     white-space: nowrap;
   }
   .icon-btn {
-    background: transparent;
+    background: var(--panel);
     border: 2px solid var(--panel);
     color: var(--text);
     width: 38px;
@@ -117,9 +117,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer;
+    transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
   }
-  .icon-btn:hover { transform: scale(1.08); border-color: var(--accent); }
-  .icon-btn.active { border-color: var(--accent); }
+  .icon-btn:hover { transform: translateY(-1px) scale(1.06); border-color: var(--accent); background: var(--panel-2); }
+  .icon-btn:active { transform: scale(0.94); }
+  .icon-btn.active { border-color: var(--accent); color: var(--accent); }
+  .icon-btn:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
   #board-wrap {
     position: relative;
   }
@@ -187,19 +194,27 @@
     padding: 10px 20px;
     font-size: 0.95rem;
     font-weight: bold;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
-    transition: transform 0.1s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.18), 0 0 0 1px rgba(255,255,255,0.04) inset;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
   }
-  button:hover { transform: scale(1.05); }
-  button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  button:hover { transform: translateY(-1px) scale(1.03); filter: brightness(1.06); box-shadow: 0 3px 8px rgba(0,0,0,0.22); }
+  button:active { transform: translateY(0) scale(0.97); filter: brightness(0.97); box-shadow: 0 1px 2px rgba(0,0,0,0.18); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; filter: none; box-shadow: none; }
   button.secondary {
     background: var(--panel-2);
     color: var(--text);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+  }
+  button.danger {
+    background: #ef4444;
+    color: #fff;
   }
   button.tiny {
     padding: 6px 10px;
     font-size: 0.8rem;
+    border-radius: 6px;
   }
   #name-input, #layout-name-input {
     padding: 9px 12px;
@@ -261,7 +276,7 @@
   .modal-card {
     background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: 12px;
     padding: 22px 24px;
     width: 100%;
     max-width: 360px;
@@ -270,8 +285,17 @@
     gap: 14px;
     max-height: 85vh;
     overflow-y: auto;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.35);
   }
   .modal-card h2 { margin: 0; font-size: 1.2rem; }
+  .section-title {
+    margin: 4px 0 -6px;
+    font-size: 0.72rem;
+    font-weight: bold;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
   .modal-card label {
     display: flex;
     flex-direction: column;
@@ -307,9 +331,27 @@
     font-size: 0.95rem;
   }
   #achv-list { list-style: none; padding-left: 0; }
-  .achv-row { display: flex; gap: 8px; align-items: baseline; }
+  .achv-row { display: flex; flex-direction: column; gap: 4px; padding: 4px 0; }
+  .achv-row-head { display: flex; gap: 8px; align-items: baseline; }
   .achv-row.locked { color: var(--text-dim); }
   .achv-row .achv-name { font-weight: bold; }
+  .achv-bar-track {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--panel-2);
+    overflow: hidden;
+    margin-left: 24px;
+  }
+  .achv-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 999px;
+  }
+  .achv-progress-label {
+    margin-left: 24px;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+  }
   #scores-list li span { color: var(--accent); font-weight: bold; }
   #scores-empty { color: var(--text-dim); font-size: 0.9rem; }
   .stats-grid {
@@ -385,6 +427,7 @@
     <div class="modal-card">
       <h2>Settings</h2>
 
+      <p class="section-title">Mode &amp; Rules</p>
       <label>Game mode
         <select id="opt-mode">
           <option value="classic">Classic</option>
@@ -418,8 +461,7 @@
         </select>
       </label>
 
-      <hr class="modal-divider">
-
+      <p class="section-title">Audio</p>
       <label>Sound volume
         <input type="range" id="opt-volume" min="0" max="100" step="5">
       </label>
@@ -431,12 +473,19 @@
           <option value="chiptune">Chiptune (retro 8-bit)</option>
         </select>
       </label>
+
+      <p class="section-title">Players</p>
       <label class="row"><input type="checkbox" id="opt-twoplayer"> Two-player (P1: Arrows · P2: WASD)</label>
       <label class="row"><input type="checkbox" id="opt-vsai"> Play vs AI (single player)</label>
+      <label class="row"><input type="checkbox" id="opt-ghost"> Show ghost of your best run</label>
+
+      <p class="section-title">Appearance</p>
       <label>Snake skin
         <select id="opt-skin"></select>
       </label>
-      <label class="row"><input type="checkbox" id="opt-ghost"> Show ghost of your best run</label>
+      <label>Apple skin
+        <select id="opt-appleskin"></select>
+      </label>
       <label>Theme
         <select id="opt-theme">
           <option value="system">System</option>
@@ -447,7 +496,7 @@
       <label class="row"><input type="checkbox" id="opt-colorblind"> Colorblind-friendly apple color</label>
       <label class="row"><input type="checkbox" id="opt-reducedmotion"> Reduce motion (particles, shake, animations)</label>
 
-      <hr class="modal-divider">
+      <p class="section-title">Tools</p>
       <div class="link-row">
         <button class="secondary tiny" id="open-controls-btn">Controls</button>
         <button class="secondary tiny" id="open-achv-btn">Achievements</button>
@@ -455,13 +504,18 @@
         <button class="secondary tiny" id="open-editor-btn">Level Editor</button>
         <button class="secondary tiny" id="open-graphics-btn">Graphics</button>
       </div>
-      <hr class="modal-divider">
+
+      <p class="section-title">Data</p>
       <div class="link-row">
         <button class="secondary tiny" id="export-save-btn">Export Save Data</button>
         <button class="secondary tiny" id="import-save-btn">Import Save Data</button>
+        <button class="secondary tiny" id="whats-new-btn">What's New</button>
         <input type="file" id="import-save-input" accept="application/json" class="hidden">
       </div>
-      <p class="modal-hint">Grid size, difficulty, wrap, layout and mode apply on your next game.</p>
+      <div class="link-row">
+        <button class="danger tiny" id="reset-data-btn">Reset All Data</button>
+      </div>
+      <p class="modal-hint">Grid size, difficulty, wrap, layout and mode apply on your next game. · v1.3</p>
       <div class="modal-actions">
         <button id="settings-close">Done</button>
       </div>
@@ -562,6 +616,23 @@
     </div>
   </div>
 
+  <div id="changelog-modal" class="modal hidden">
+    <div class="modal-card">
+      <h2>What's New</h2>
+      <p class="section-title">v1.3</p>
+      <p class="modal-hint">Achievement progress bars, apple skins, a celebration effect for new best scores, a Reset All Data option, and an overall UI/button pass.</p>
+      <p class="section-title">v1.2</p>
+      <p class="modal-hint">AI opponent, arcade-style attract mode, moving obstacles, the 🔨 hammer power-up, Insane difficulty, boost, save export/import, vibration, sound themes, and a first-time tutorial.</p>
+      <p class="section-title">v1.1</p>
+      <p class="modal-hint">Game modes (Zen, Time Attack, Daily Challenge), achievements, snake skins, a level editor, ghost replays, and a Graphics quality preset.</p>
+      <p class="section-title">v1.0</p>
+      <p class="modal-hint">The original: snake, apple, sound effects, difficulty, obstacles, power-ups, and a two-player mode.</p>
+      <div class="modal-actions">
+        <button id="changelog-close">Close</button>
+      </div>
+    </div>
+  </div>
+
 <script>
 (function () {
   const CELL = 20;
@@ -587,19 +658,24 @@
     mono:    { name: 'Monochrome', head: '#e2e8f0', light: '#cbd5e1', dark: '#475569', unlock: 'survivor' },
     rainbow: { name: 'Rainbow', rainbow: true, unlock: 'combo-master' },
   };
+  const APPLE_SKINS = {
+    classic: { name: 'Classic Apple', unlock: null },
+    berry:   { name: 'Berry', c0: '#ede9fe', c1: '#8b5cf6', c2: '#5b21b6', leaf: '#4ade80', unlock: 'enthusiast' },
+    citrus:  { name: 'Citrus', c0: '#fff7cc', c1: '#fb923c', c2: '#9a3412', leaf: '#22c55e', unlock: 'century' },
+  };
   const ACHIEVEMENTS = [
-    { id: 'first-bite',    name: 'First Bite',       desc: 'Eat your first apple.',              check: s => s.applesEaten >= 1 },
-    { id: 'enthusiast',    name: 'Apple Enthusiast', desc: 'Eat 50 apples in total.',             check: s => s.applesEaten >= 50 },
-    { id: 'century',       name: 'Century Snake',    desc: 'Grow a snake to 20 segments.',        check: s => s.longestSnake >= 20 },
-    { id: 'speed-demon',   name: 'Speed Demon',      desc: 'Eat a speed apple.',                  check: s => s.speedEaten >= 1 },
-    { id: 'iron-stomach',  name: 'Iron Stomach',     desc: 'Eat a golden apple.',                 check: s => s.goldenEaten >= 1 },
-    { id: 'survivor',      name: 'Survivor',         desc: 'Reach level 5 in one run.',           check: s => s.maxLevel >= 5 },
-    { id: 'rivalry',       name: 'Rivalry',          desc: 'Play 10 two-player rounds.',          check: s => (s.p1Wins + s.p2Wins + s.ties) >= 10 },
-    { id: 'combo-master',  name: 'Combo Master',     desc: 'Reach a x5 combo.',                   check: s => s.comboMax >= 5 },
-    { id: 'hard-hero',     name: 'Hard Mode Hero',   desc: 'Score 10+ on Hard difficulty.',        check: s => s.hardBest >= 10 },
-    { id: 'daily-devotee', name: 'Daily Devotee',    desc: 'Play the Daily Challenge 5 times.',   check: s => s.dailyPlays >= 5 },
-    { id: 'insane-survivor', name: 'Insane Survivor', desc: 'Score 5+ on Insane difficulty.',     check: s => s.insaneBest >= 5 },
-    { id: 'ai-slayer',     name: 'AI Slayer',        desc: 'Beat the AI opponent 3 times.',       check: s => s.aiWins >= 3 },
+    { id: 'first-bite',    name: 'First Bite',       desc: 'Eat your first apple.',              check: s => s.applesEaten >= 1,  progress: s => [s.applesEaten, 1] },
+    { id: 'enthusiast',    name: 'Apple Enthusiast', desc: 'Eat 50 apples in total.',             check: s => s.applesEaten >= 50, progress: s => [s.applesEaten, 50] },
+    { id: 'century',       name: 'Century Snake',    desc: 'Grow a snake to 20 segments.',        check: s => s.longestSnake >= 20, progress: s => [s.longestSnake, 20] },
+    { id: 'speed-demon',   name: 'Speed Demon',      desc: 'Eat a speed apple.',                  check: s => s.speedEaten >= 1,    progress: s => [s.speedEaten, 1] },
+    { id: 'iron-stomach',  name: 'Iron Stomach',     desc: 'Eat a golden apple.',                 check: s => s.goldenEaten >= 1,   progress: s => [s.goldenEaten, 1] },
+    { id: 'survivor',      name: 'Survivor',         desc: 'Reach level 5 in one run.',           check: s => s.maxLevel >= 5,      progress: s => [s.maxLevel, 5] },
+    { id: 'rivalry',       name: 'Rivalry',          desc: 'Play 10 two-player rounds.',          check: s => (s.p1Wins + s.p2Wins + s.ties) >= 10, progress: s => [s.p1Wins + s.p2Wins + s.ties, 10] },
+    { id: 'combo-master',  name: 'Combo Master',     desc: 'Reach a x5 combo.',                   check: s => s.comboMax >= 5,      progress: s => [s.comboMax, 5] },
+    { id: 'hard-hero',     name: 'Hard Mode Hero',   desc: 'Score 10+ on Hard difficulty.',        check: s => s.hardBest >= 10,     progress: s => [s.hardBest, 10] },
+    { id: 'daily-devotee', name: 'Daily Devotee',    desc: 'Play the Daily Challenge 5 times.',   check: s => s.dailyPlays >= 5,    progress: s => [s.dailyPlays, 5] },
+    { id: 'insane-survivor', name: 'Insane Survivor', desc: 'Score 5+ on Insane difficulty.',     check: s => s.insaneBest >= 5,    progress: s => [s.insaneBest, 5] },
+    { id: 'ai-slayer',     name: 'AI Slayer',        desc: 'Beat the AI opponent 3 times.',       check: s => s.aiWins >= 3,        progress: s => [s.aiWins, 3] },
   ];
   const DEFAULT_KEYMAP = {
     p1: { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' },
@@ -669,6 +745,7 @@
   const optTwoPlayer = document.getElementById('opt-twoplayer');
   const optVsAI = document.getElementById('opt-vsai');
   const optSkin = document.getElementById('opt-skin');
+  const optAppleSkin = document.getElementById('opt-appleskin');
   const optGhost = document.getElementById('opt-ghost');
   const optTheme = document.getElementById('opt-theme');
   const optColorblind = document.getElementById('opt-colorblind');
@@ -709,7 +786,7 @@
       grid: 'medium', wrap: false, difficulty: 'normal', volume: 0.6, twoPlayer: false, theme: 'system',
       mode: 'classic', music: false, colorblind: false,
       reducedMotion: window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-      skin: 'classic', ghost: false, layoutName: '',
+      skin: 'classic', appleSkin: 'classic', ghost: false, layoutName: '',
       snakeStyle: 'smooth', particlesEnabled: true, shakeEnabled: true, glowEnabled: true, gridLinesEnabled: true,
       graphicsQuality: 'high',
       vsAI: false, vibration: true, soundTheme: 'arcade',
@@ -731,6 +808,10 @@
 
   function isSkinUnlocked(id) {
     const s = SKINS[id];
+    return !s.unlock || stats.unlocked.includes(s.unlock);
+  }
+  function isAppleSkinUnlocked(id) {
+    const s = APPLE_SKINS[id];
     return !s.unlock || stats.unlocked.includes(s.unlock);
   }
 
@@ -764,7 +845,7 @@
         queueAchvToast(`🏆 ${a.name}!`);
       }
     });
-    if (unlockedNew) { saveStats(); populateSkinSelect(); }
+    if (unlockedNew) { saveStats(); populateSkinSelect(); populateAppleSkinSelect(); }
   }
 
   function applyTheme() {
@@ -829,6 +910,21 @@
     if (!isSkinUnlocked(prev)) { settings.skin = 'classic'; saveSettings(); }
   }
 
+  function populateAppleSkinSelect() {
+    const prev = settings.appleSkin;
+    optAppleSkin.innerHTML = '';
+    Object.keys(APPLE_SKINS).forEach(id => {
+      const opt = document.createElement('option');
+      const unlocked = isAppleSkinUnlocked(id);
+      opt.value = id;
+      opt.textContent = unlocked ? APPLE_SKINS[id].name : `🔒 ${APPLE_SKINS[id].name}`;
+      opt.disabled = !unlocked;
+      optAppleSkin.appendChild(opt);
+    });
+    optAppleSkin.value = isAppleSkinUnlocked(prev) ? prev : 'classic';
+    if (!isAppleSkinUnlocked(prev)) { settings.appleSkin = 'classic'; saveSettings(); }
+  }
+
   function populateLayoutSelect() {
     const layouts = safeParseArr(localStorage.getItem(LAYOUTS_KEY));
     const prev = settings.layoutName;
@@ -871,6 +967,7 @@
     optColorblind.checked = settings.colorblind;
     optReducedMotion.checked = settings.reducedMotion;
     populateSkinSelect();
+    populateAppleSkinSelect();
     populateLayoutSelect();
     updateModeDependentUI();
   }
@@ -1012,6 +1109,8 @@
   let runTrail = [], ghostTrail = null, ghostIndex = 0;
   let pendingScoreKey = null;
   let boosting = false, boostTicks = 0;
+  let beatBestThisRun = false;
+  let confetti = [];
   let attractMode = false, idleTimer = null;
 
   function vibrate(ms) {
@@ -1032,6 +1131,8 @@
   function reset() {
     resizeCanvasIfNeeded();
     clearInterval(timeInterval);
+    beatBestThisRun = false;
+    confetti = [];
     rand = settings.mode === 'daily' ? mulberry32(dailySeed()) : Math.random;
     const midY = Math.floor(rows / 2);
     if (hasSecondSnake()) {
@@ -1210,6 +1311,43 @@
     });
   }
 
+  const CONFETTI_COLORS = ['#fbbf24', '#38bdf8', '#4ade80', '#f472b6', '#a855f7'];
+  function spawnConfetti() {
+    if (settings.reducedMotion || attractMode) return;
+    for (let i = 0; i < 40; i++) {
+      confetti.push({
+        x: Math.random() * cssSize,
+        y: -10 - Math.random() * 40,
+        vx: (Math.random() - 0.5) * 0.07,
+        vy: 0.09 + Math.random() * 0.08,
+        size: 3 + Math.random() * 3,
+        color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+        rot: Math.random() * Math.PI * 2,
+        vr: (Math.random() - 0.5) * 0.02,
+        life: 2200, maxLife: 2200,
+      });
+    }
+  }
+  function updateConfetti(dt) {
+    for (let i = confetti.length - 1; i >= 0; i--) {
+      const c = confetti[i];
+      c.x += c.vx * dt; c.y += c.vy * dt; c.rot += c.vr * dt; c.life -= dt;
+      if (c.life <= 0 || c.y > cssSize + 20) confetti.splice(i, 1);
+    }
+  }
+  function drawConfetti() {
+    confetti.forEach(c => {
+      ctx.save();
+      ctx.translate(c.x, c.y);
+      ctx.rotate(c.rot);
+      ctx.globalAlpha = Math.max(0, Math.min(1, c.life / 400));
+      ctx.fillStyle = c.color;
+      ctx.fillRect(-c.size / 2, -c.size / 2, c.size, c.size * 1.6);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    });
+  }
+
   // ---------- effects (frenzy / slow-mo / combo) ----------
   function effectsActive() {
     const now = performance.now();
@@ -1304,9 +1442,10 @@
       ctx.fill();
     }
 
-    const c0 = isGolden ? '#fff7cc' : '#fecaca';
-    const c1 = isGolden ? '#fbbf24' : getCss('--food');
-    const c2 = isGolden ? '#b45309' : '#b91c1c';
+    const appleSkin = APPLE_SKINS[settings.appleSkin] || APPLE_SKINS.classic;
+    const c0 = isGolden ? '#fff7cc' : (appleSkin.c0 || '#fecaca');
+    const c1 = isGolden ? '#fbbf24' : (appleSkin.c1 || getCss('--food'));
+    const c2 = isGolden ? '#b45309' : (appleSkin.c2 || '#b91c1c');
     const bodyGrad = ctx.createRadialGradient(fx - appleR * 0.4, fy - appleR * 0.4, 1, fx, fy, appleR * 1.3);
     bodyGrad.addColorStop(0, c0);
     bodyGrad.addColorStop(0.4, c1);
@@ -1328,7 +1467,7 @@
     ctx.quadraticCurveTo(fx + 1.5, fy - appleR * 1.3, fx + 0.5, fy - appleR * 1.6);
     ctx.stroke();
 
-    ctx.fillStyle = '#4ade80';
+    ctx.fillStyle = isGolden ? '#4ade80' : (appleSkin.leaf || '#4ade80');
     ctx.beginPath();
     ctx.ellipse(fx + appleR * 0.7, fy - appleR * 1.15, appleR * 0.4, appleR * 0.22, -0.6, 0, Math.PI * 2);
     ctx.fill();
@@ -1453,6 +1592,7 @@
     }
 
     drawParticles();
+    drawConfetti();
     ctx.restore();
   }
 
@@ -1512,7 +1652,12 @@
     if (player === 1) {
       score += amount;
       scoreEl.textContent = score;
-      if (!attractMode && score > best) { best = score; bestEl.textContent = best; localStorage.setItem(BEST_KEY, best); }
+      if (!attractMode && score > best) {
+        best = score;
+        bestEl.textContent = best;
+        localStorage.setItem(BEST_KEY, best);
+        if (!beatBestThisRun) { beatBestThisRun = true; spawnConfetti(); }
+      }
     } else {
       score2 += amount;
       score2El.textContent = score2;
@@ -1634,6 +1779,7 @@
     const dt = Math.min(now - lastFrameTime, 50);
     lastFrameTime = now;
     updateParticles(dt);
+    updateConfetti(dt);
     checkEffectTimers();
     if (gameState === 'playing' && food && food.type === 'golden' && food.expiresAt && now > food.expiresAt) {
       placeFood();
@@ -1935,6 +2081,7 @@
   optVibration.addEventListener('change', e => { settings.vibration = e.target.checked; saveSettings(); });
   optSoundTheme.addEventListener('change', e => { settings.soundTheme = e.target.value; saveSettings(); });
   optSkin.addEventListener('change', e => { settings.skin = e.target.value; saveSettings(); });
+  optAppleSkin.addEventListener('change', e => { settings.appleSkin = e.target.value; saveSettings(); });
   optGhost.addEventListener('change', e => { settings.ghost = e.target.checked; saveSettings(); });
   optTheme.addEventListener('change', e => { settings.theme = e.target.value; saveSettings(); applyTheme(); });
   optColorblind.addEventListener('change', e => { settings.colorblind = e.target.checked; saveSettings(); applyColorblind(); });
@@ -1970,7 +2117,14 @@
       const unlocked = stats.unlocked.includes(a.id);
       const li = document.createElement('li');
       li.className = 'achv-row' + (unlocked ? '' : ' locked');
-      li.innerHTML = `<span>${unlocked ? '✅' : '🔒'}</span><span class="achv-name">${escapeHtml(a.name)}</span><span>— ${escapeHtml(a.desc)}</span>`;
+      let html = `<div class="achv-row-head"><span>${unlocked ? '✅' : '🔒'}</span><span class="achv-name">${escapeHtml(a.name)}</span><span>— ${escapeHtml(a.desc)}</span></div>`;
+      if (!unlocked && a.progress) {
+        const [cur, target] = a.progress(stats);
+        const pct = Math.max(0, Math.min(100, Math.round((cur / target) * 100)));
+        html += `<div class="achv-bar-track"><div class="achv-bar-fill" style="width:${pct}%"></div></div>`;
+        html += `<div class="achv-progress-label">${Math.min(cur, target)} / ${target}</div>`;
+      }
+      li.innerHTML = html;
       achvList.appendChild(li);
     });
   }
@@ -2038,9 +2192,10 @@
     reader.onload = () => {
       try {
         const data = JSON.parse(reader.result);
-        Object.keys(data).forEach(k => {
-          if (k.startsWith('snake-')) localStorage.setItem(k, data[k]);
-        });
+        const keys = Object.keys(data).filter(k => k.startsWith('snake-'));
+        if (keys.length === 0) { alert('That file has no Snake save data in it.'); return; }
+        if (!confirm(`Import ${keys.length} saved item(s)? This will overwrite your current settings, stats, and scores.`)) return;
+        keys.forEach(k => localStorage.setItem(k, data[k]));
         alert('Save data imported! The page will now reload.');
         location.reload();
       } catch {
@@ -2050,6 +2205,22 @@
     reader.readAsText(file);
     importSaveInput.value = '';
   });
+
+  document.getElementById('reset-data-btn').addEventListener('click', () => {
+    if (!confirm('Reset ALL Snake data? This clears settings, stats, achievements, high scores, layouts, and ghosts. This cannot be undone.')) return;
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('snake-')) keys.push(k);
+    }
+    keys.forEach(k => localStorage.removeItem(k));
+    location.reload();
+  });
+
+  const changelogModal = document.getElementById('changelog-modal');
+  document.getElementById('whats-new-btn').addEventListener('click', () => changelogModal.classList.remove('hidden'));
+  document.getElementById('changelog-close').addEventListener('click', () => changelogModal.classList.add('hidden'));
+
   optSnakeStyle.addEventListener('change', e => { settings.snakeStyle = e.target.value; saveSettings(); });
   optParticles.addEventListener('change', e => { settings.particlesEnabled = e.target.checked; saveSettings(); });
   optShake.addEventListener('change', e => { settings.shakeEnabled = e.target.checked; saveSettings(); });
