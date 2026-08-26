@@ -19,6 +19,7 @@
     --food-glow: #fca5a5;
     --obstacle: #64748b;
     --obstacle-dark: #334155;
+    --gold: #fbbf24;
     --text: #e2e8f0;
     --text-dim: #94a3b8;
     --accent: #38bdf8;
@@ -83,7 +84,7 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: center;
-    gap: 18px;
+    gap: 16px;
     font-size: 1rem;
   }
   .hud-score span { color: var(--accent); font-weight: bold; }
@@ -92,6 +93,8 @@
     gap: 6px;
     font-size: 0.8rem;
     min-height: 22px;
+    flex-wrap: wrap;
+    justify-content: center;
   }
   .badge {
     background: var(--panel-2);
@@ -100,6 +103,7 @@
     display: flex;
     align-items: center;
     gap: 4px;
+    white-space: nowrap;
   }
   .icon-btn {
     background: transparent;
@@ -115,6 +119,7 @@
     justify-content: center;
   }
   .icon-btn:hover { transform: scale(1.08); border-color: var(--accent); }
+  .icon-btn.active { border-color: var(--accent); }
   #board-wrap {
     position: relative;
   }
@@ -125,7 +130,7 @@
     box-shadow: 0 0 30px rgba(56, 189, 248, 0.15);
     display: block;
   }
-  #level-toast {
+  #level-toast, #achv-toast {
     position: absolute;
     top: 10px;
     left: 50%;
@@ -138,8 +143,14 @@
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.25s ease, transform 0.25s ease;
+    white-space: nowrap;
+    z-index: 5;
   }
-  #level-toast.show {
+  #achv-toast {
+    top: 46px;
+    background: var(--gold);
+  }
+  #level-toast.show, #achv-toast.show {
     opacity: 1;
     transform: translate(-50%, 0);
   }
@@ -178,11 +189,16 @@
     transition: transform 0.1s ease;
   }
   button:hover { transform: scale(1.05); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
   button.secondary {
     background: var(--panel-2);
     color: var(--text);
   }
-  #name-input {
+  button.tiny {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+  #name-input, #layout-name-input {
     padding: 9px 12px;
     border-radius: 6px;
     border: 1px solid var(--border);
@@ -213,6 +229,22 @@
     #touch-controls { display: grid; }
   }
 
+  #editor-bar {
+    position: absolute;
+    left: 50%;
+    bottom: 10px;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 92%;
+  }
+
   .modal {
     position: fixed;
     inset: 0;
@@ -229,7 +261,7 @@
     border-radius: 10px;
     padding: 22px 24px;
     width: 100%;
-    max-width: 340px;
+    max-width: 360px;
     display: flex;
     flex-direction: column;
     gap: 14px;
@@ -258,9 +290,11 @@
     padding: 7px 8px;
     font-size: 0.9rem;
   }
-  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
   .modal-hint { font-size: 0.75rem; color: var(--text-dim); margin: 0; }
-  #scores-list {
+  .modal-divider { border: none; border-top: 1px solid var(--border); margin: 2px 0; }
+  .link-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  #scores-list, #achv-list {
     list-style: decimal;
     padding-left: 22px;
     margin: 0;
@@ -269,8 +303,29 @@
     gap: 6px;
     font-size: 0.95rem;
   }
+  #achv-list { list-style: none; padding-left: 0; }
+  .achv-row { display: flex; gap: 8px; align-items: baseline; }
+  .achv-row.locked { color: var(--text-dim); }
+  .achv-row .achv-name { font-weight: bold; }
   #scores-list li span { color: var(--accent); font-weight: bold; }
   #scores-empty { color: var(--text-dim); font-size: 0.9rem; }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 12px;
+    font-size: 0.9rem;
+  }
+  .stats-grid span { color: var(--accent); font-weight: bold; }
+  .control-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 0.9rem;
+  }
+  .keybtn {
+    min-width: 90px;
+  }
 </style>
 </head>
 <body>
@@ -280,14 +335,25 @@
     <div class="hud-score hidden" id="score2-wrap">P2 <span id="score2">0</span></div>
     <div class="hud-score">Best <span id="best">0</span></div>
     <div class="hud-score">Lv <span id="level">1</span></div>
+    <div class="hud-score hidden" id="time-wrap">⏱ <span id="time-left">60</span>s</div>
     <div id="effect-badges"></div>
+    <button class="icon-btn hidden" id="zen-stop-btn" title="End Zen run">⏹</button>
     <button class="icon-btn" id="mute-btn" title="Toggle sound">🔊</button>
+    <button class="icon-btn" id="music-btn" title="Toggle music">🎵</button>
+    <button class="icon-btn" id="fullscreen-btn" title="Fullscreen">⛶</button>
     <button class="icon-btn" id="settings-btn" title="Settings">⚙️</button>
   </div>
 
   <div id="board-wrap">
     <canvas id="board" width="400" height="400"></canvas>
     <div id="level-toast"></div>
+    <div id="achv-toast"></div>
+    <div id="editor-bar" class="hidden">
+      <input id="layout-name-input" maxlength="16" placeholder="Layout name">
+      <button class="tiny" id="editor-save-btn">Save</button>
+      <button class="tiny secondary" id="editor-clear-btn">Clear</button>
+      <button class="tiny secondary" id="editor-exit-btn">Exit Editor</button>
+    </div>
     <div id="overlay">
       <h2 id="overlay-title">Ready?</h2>
       <p id="overlay-msg">Use arrow keys or WASD to move</p>
@@ -314,6 +380,18 @@
   <div id="settings-modal" class="modal hidden">
     <div class="modal-card">
       <h2>Settings</h2>
+
+      <label>Game mode
+        <select id="opt-mode">
+          <option value="classic">Classic</option>
+          <option value="zen">Zen (no death)</option>
+          <option value="time">Time Attack (60s)</option>
+          <option value="daily">Daily Challenge</option>
+        </select>
+      </label>
+      <p class="modal-hint hidden" id="zen-hint">Zen always wraps around edges and has no obstacles or death — press ⏹ to end your run.</p>
+      <p class="modal-hint hidden" id="daily-hint">Daily Challenge always uses Medium grid, Normal difficulty, no wrap — same board all day.</p>
+
       <label>Grid size
         <select id="opt-grid">
           <option value="small">Small (15×15)</option>
@@ -329,10 +407,23 @@
           <option value="hard">Hard</option>
         </select>
       </label>
+      <label>Custom layout
+        <select id="opt-layout">
+          <option value="">Random (default)</option>
+        </select>
+      </label>
+
+      <hr class="modal-divider">
+
       <label>Sound volume
         <input type="range" id="opt-volume" min="0" max="100" step="5">
       </label>
+      <label class="row"><input type="checkbox" id="opt-music"> Background music</label>
       <label class="row"><input type="checkbox" id="opt-twoplayer"> Two-player (P1: Arrows · P2: WASD)</label>
+      <label>Snake skin
+        <select id="opt-skin"></select>
+      </label>
+      <label class="row"><input type="checkbox" id="opt-ghost"> Show ghost of your best run</label>
       <label>Theme
         <select id="opt-theme">
           <option value="system">System</option>
@@ -340,7 +431,17 @@
           <option value="dark">Dark</option>
         </select>
       </label>
-      <p class="modal-hint">Grid size, difficulty, wrap mode and two-player apply on your next game.</p>
+      <label class="row"><input type="checkbox" id="opt-colorblind"> Colorblind-friendly apple color</label>
+      <label class="row"><input type="checkbox" id="opt-reducedmotion"> Reduce motion (particles, shake, animations)</label>
+
+      <hr class="modal-divider">
+      <div class="link-row">
+        <button class="secondary tiny" id="open-controls-btn">Controls</button>
+        <button class="secondary tiny" id="open-achv-btn">Achievements</button>
+        <button class="secondary tiny" id="open-stats-btn">Stats</button>
+        <button class="secondary tiny" id="open-editor-btn">Level Editor</button>
+      </div>
+      <p class="modal-hint">Grid size, difficulty, wrap, layout and mode apply on your next game.</p>
       <div class="modal-actions">
         <button id="settings-close">Done</button>
       </div>
@@ -349,11 +450,52 @@
 
   <div id="scores-modal" class="modal hidden">
     <div class="modal-card">
-      <h2>High Scores</h2>
+      <h2 id="scores-title">High Scores</h2>
       <ol id="scores-list"></ol>
       <p id="scores-empty">No scores yet — go set one!</p>
       <div class="modal-actions">
         <button id="scores-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="controls-modal" class="modal hidden">
+    <div class="modal-card">
+      <h2>Controls</h2>
+      <p class="modal-hint">Click a key, then press any key to rebind it.</p>
+      <p class="modal-hint" style="font-weight:bold; margin-top:4px;">Player 1</p>
+      <div class="control-row">Up <button class="keybtn secondary tiny" data-player="p1" data-action="up"></button></div>
+      <div class="control-row">Down <button class="keybtn secondary tiny" data-player="p1" data-action="down"></button></div>
+      <div class="control-row">Left <button class="keybtn secondary tiny" data-player="p1" data-action="left"></button></div>
+      <div class="control-row">Right <button class="keybtn secondary tiny" data-player="p1" data-action="right"></button></div>
+      <p class="modal-hint" style="font-weight:bold; margin-top:4px;">Player 2</p>
+      <div class="control-row">Up <button class="keybtn secondary tiny" data-player="p2" data-action="up"></button></div>
+      <div class="control-row">Down <button class="keybtn secondary tiny" data-player="p2" data-action="down"></button></div>
+      <div class="control-row">Left <button class="keybtn secondary tiny" data-player="p2" data-action="left"></button></div>
+      <div class="control-row">Right <button class="keybtn secondary tiny" data-player="p2" data-action="right"></button></div>
+      <div class="modal-actions">
+        <button class="secondary" id="controls-reset">Reset defaults</button>
+        <button id="controls-close">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="achv-modal" class="modal hidden">
+    <div class="modal-card">
+      <h2>Achievements</h2>
+      <ul id="achv-list"></ul>
+      <div class="modal-actions">
+        <button id="achv-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="stats-modal" class="modal hidden">
+    <div class="modal-card">
+      <h2>Stats</h2>
+      <div class="stats-grid" id="stats-grid"></div>
+      <div class="modal-actions">
+        <button id="stats-close">Close</button>
       </div>
     </div>
   </div>
@@ -374,10 +516,41 @@
     slow:   { glyph: '❄', ring: '#38bdf8', points: 1 },
     shrink: { glyph: '✂', ring: '#a855f7', points: 1 },
   };
-  const SETTINGS_KEY = 'snake-settings-v2';
+  const SKINS = {
+    classic: { name: 'Classic', unlock: null },
+    ocean:   { name: 'Ocean', head: '#0ea5e9', light: '#7dd3fc', dark: '#075985', unlock: 'enthusiast' },
+    sunset:  { name: 'Sunset', head: '#fb923c', light: '#fed7aa', dark: '#9a3412', unlock: 'century' },
+    mono:    { name: 'Monochrome', head: '#e2e8f0', light: '#cbd5e1', dark: '#475569', unlock: 'survivor' },
+    rainbow: { name: 'Rainbow', rainbow: true, unlock: 'combo-master' },
+  };
+  const ACHIEVEMENTS = [
+    { id: 'first-bite',    name: 'First Bite',       desc: 'Eat your first apple.',              check: s => s.applesEaten >= 1 },
+    { id: 'enthusiast',    name: 'Apple Enthusiast', desc: 'Eat 50 apples in total.',             check: s => s.applesEaten >= 50 },
+    { id: 'century',       name: 'Century Snake',    desc: 'Grow a snake to 20 segments.',        check: s => s.longestSnake >= 20 },
+    { id: 'speed-demon',   name: 'Speed Demon',      desc: 'Eat a speed apple.',                  check: s => s.speedEaten >= 1 },
+    { id: 'iron-stomach',  name: 'Iron Stomach',     desc: 'Eat a golden apple.',                 check: s => s.goldenEaten >= 1 },
+    { id: 'survivor',      name: 'Survivor',         desc: 'Reach level 5 in one run.',           check: s => s.maxLevel >= 5 },
+    { id: 'rivalry',       name: 'Rivalry',          desc: 'Play 10 two-player rounds.',          check: s => (s.p1Wins + s.p2Wins + s.ties) >= 10 },
+    { id: 'combo-master',  name: 'Combo Master',     desc: 'Reach a x5 combo.',                   check: s => s.comboMax >= 5 },
+    { id: 'hard-hero',     name: 'Hard Mode Hero',   desc: 'Score 10+ on Hard difficulty.',        check: s => s.hardBest >= 10 },
+    { id: 'daily-devotee', name: 'Daily Devotee',    desc: 'Play the Daily Challenge 5 times.',   check: s => s.dailyPlays >= 5 },
+  ];
+  const DEFAULT_KEYMAP = {
+    p1: { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' },
+    p2: { up: 'w', down: 's', left: 'a', right: 'd' },
+  };
+  const ACTION_DIRS = { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
+
+  const SETTINGS_KEY = 'snake-settings-v3';
   const BEST_KEY = 'snake-best-score';
   const MUTE_KEY = 'snake-muted';
   const SCORES_KEY = 'snake-highscores-v1';
+  const STATS_KEY = 'snake-stats-v1';
+  const LAYOUTS_KEY = 'snake-layouts-v1';
+  const GHOST_KEY_PREFIX = 'snake-ghost-';
+
+  function safeParse(s) { try { return JSON.parse(s) || {}; } catch { return {}; } }
+  function safeParseArr(s) { const v = safeParse(s); return Array.isArray(v) ? v : []; }
 
   const canvas = document.getElementById('board');
   const ctx = canvas.getContext('2d');
@@ -388,8 +561,12 @@
   const score2El = document.getElementById('score2');
   const bestEl = document.getElementById('best');
   const levelEl = document.getElementById('level');
+  const timeWrap = document.getElementById('time-wrap');
+  const timeEl = document.getElementById('time-left');
   const effectBadges = document.getElementById('effect-badges');
   const levelToast = document.getElementById('level-toast');
+  const achvToast = document.getElementById('achv-toast');
+  const zenStopBtn = document.getElementById('zen-stop-btn');
   const overlay = document.getElementById('overlay');
   const overlayTitle = document.getElementById('overlay-title');
   const overlayMsg = document.getElementById('overlay-msg');
@@ -401,46 +578,177 @@
   const viewScoresBtn = document.getElementById('view-scores-btn');
   const copyScoreBtn = document.getElementById('copy-score-btn');
   const muteBtn = document.getElementById('mute-btn');
+  const musicBtn = document.getElementById('music-btn');
+  const fullscreenBtn = document.getElementById('fullscreen-btn');
   const settingsBtn = document.getElementById('settings-btn');
   const settingsModal = document.getElementById('settings-modal');
   const settingsClose = document.getElementById('settings-close');
   const scoresModal = document.getElementById('scores-modal');
   const scoresClose = document.getElementById('scores-close');
+  const scoresTitle = document.getElementById('scores-title');
   const scoresList = document.getElementById('scores-list');
   const scoresEmpty = document.getElementById('scores-empty');
+  const zenHint = document.getElementById('zen-hint');
+  const dailyHint = document.getElementById('daily-hint');
+  const optMode = document.getElementById('opt-mode');
   const optGrid = document.getElementById('opt-grid');
   const optWrap = document.getElementById('opt-wrap');
   const optDifficulty = document.getElementById('opt-difficulty');
+  const optLayout = document.getElementById('opt-layout');
   const optVolume = document.getElementById('opt-volume');
+  const optMusic = document.getElementById('opt-music');
   const optTwoPlayer = document.getElementById('opt-twoplayer');
+  const optSkin = document.getElementById('opt-skin');
+  const optGhost = document.getElementById('opt-ghost');
   const optTheme = document.getElementById('opt-theme');
+  const optColorblind = document.getElementById('opt-colorblind');
+  const optReducedMotion = document.getElementById('opt-reducedmotion');
+
+  const openControlsBtn = document.getElementById('open-controls-btn');
+  const openAchvBtn = document.getElementById('open-achv-btn');
+  const openStatsBtn = document.getElementById('open-stats-btn');
+  const openEditorBtn = document.getElementById('open-editor-btn');
+  const controlsModal = document.getElementById('controls-modal');
+  const controlsClose = document.getElementById('controls-close');
+  const controlsReset = document.getElementById('controls-reset');
+  const achvModal = document.getElementById('achv-modal');
+  const achvClose = document.getElementById('achv-close');
+  const achvList = document.getElementById('achv-list');
+  const statsModal = document.getElementById('stats-modal');
+  const statsClose = document.getElementById('stats-close');
+  const statsGrid = document.getElementById('stats-grid');
+
+  const editorBar = document.getElementById('editor-bar');
+  const layoutNameInput = document.getElementById('layout-name-input');
+  const editorSaveBtn = document.getElementById('editor-save-btn');
+  const editorClearBtn = document.getElementById('editor-clear-btn');
+  const editorExitBtn = document.getElementById('editor-exit-btn');
 
   // ---------- settings ----------
   let settings = Object.assign(
-    { grid: 'medium', wrap: false, difficulty: 'normal', volume: 0.6, twoPlayer: false, theme: 'system' },
+    {
+      grid: 'medium', wrap: false, difficulty: 'normal', volume: 0.6, twoPlayer: false, theme: 'system',
+      mode: 'classic', music: false, colorblind: false,
+      reducedMotion: window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      skin: 'classic', ghost: false, layoutName: '',
+    },
     safeParse(localStorage.getItem(SETTINGS_KEY))
   );
-  function safeParse(s) { try { return JSON.parse(s) || {}; } catch { return {}; } }
+  if (!settings.keymap) settings.keymap = JSON.parse(JSON.stringify(DEFAULT_KEYMAP));
   function saveSettings() { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
+
+  // ---------- stats ----------
+  let stats = Object.assign({
+    gamesPlayed: 0, applesEaten: 0, longestSnake: 3, p1Wins: 0, p2Wins: 0, ties: 0,
+    goldenEaten: 0, speedEaten: 0, comboMax: 0, dailyPlays: 0, hardBest: 0, maxLevel: 1,
+    unlocked: [],
+  }, safeParse(localStorage.getItem(STATS_KEY)));
+  if (!Array.isArray(stats.unlocked)) stats.unlocked = [];
+  function saveStats() { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); }
+
+  function isSkinUnlocked(id) {
+    const s = SKINS[id];
+    return !s.unlock || stats.unlocked.includes(s.unlock);
+  }
+
+  function showToast(el, text) {
+    el.textContent = text;
+    el.style.transition = settings.reducedMotion ? 'none' : '';
+    el.classList.add('show');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove('show'), 1400);
+  }
+
+  function checkAchievements() {
+    let unlockedNew = false;
+    ACHIEVEMENTS.forEach(a => {
+      if (!stats.unlocked.includes(a.id) && a.check(stats)) {
+        stats.unlocked.push(a.id);
+        unlockedNew = true;
+        showToast(achvToast, `🏆 ${a.name}!`);
+      }
+    });
+    if (unlockedNew) { saveStats(); populateSkinSelect(); }
+  }
 
   function applyTheme() {
     if (settings.theme === 'system') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', settings.theme);
   }
 
+  function applyColorblind() {
+    const root = document.documentElement;
+    if (settings.colorblind) {
+      root.style.setProperty('--food', '#3b82f6');
+      root.style.setProperty('--food-glow', '#93c5fd');
+    } else {
+      root.style.removeProperty('--food');
+      root.style.removeProperty('--food-glow');
+    }
+  }
+
+  function populateSkinSelect() {
+    const prev = settings.skin;
+    optSkin.innerHTML = '';
+    Object.keys(SKINS).forEach(id => {
+      const opt = document.createElement('option');
+      const unlocked = isSkinUnlocked(id);
+      opt.value = id;
+      opt.textContent = unlocked ? SKINS[id].name : `🔒 ${SKINS[id].name}`;
+      opt.disabled = !unlocked;
+      optSkin.appendChild(opt);
+    });
+    optSkin.value = isSkinUnlocked(prev) ? prev : 'classic';
+    if (!isSkinUnlocked(prev)) { settings.skin = 'classic'; saveSettings(); }
+  }
+
+  function populateLayoutSelect() {
+    const layouts = safeParseArr(localStorage.getItem(LAYOUTS_KEY));
+    const prev = settings.layoutName;
+    optLayout.innerHTML = '<option value="">Random (default)</option>';
+    layouts.forEach(l => {
+      const opt = document.createElement('option');
+      opt.value = l.name;
+      opt.textContent = `${l.name} (${l.grid})`;
+      optLayout.appendChild(opt);
+    });
+    optLayout.value = layouts.some(l => l.name === prev) ? prev : '';
+  }
+
+  function updateModeDependentUI() {
+    zenHint.classList.toggle('hidden', settings.mode !== 'zen');
+    dailyHint.classList.toggle('hidden', settings.mode !== 'daily');
+    optTwoPlayer.disabled = settings.mode !== 'classic';
+    optLayout.disabled = settings.mode !== 'classic';
+    optWrap.disabled = settings.mode === 'zen' || settings.mode === 'daily';
+    optWrap.checked = settings.mode === 'zen' ? true : (settings.mode === 'daily' ? false : settings.wrap);
+    optGrid.disabled = settings.mode === 'daily';
+    optDifficulty.disabled = settings.mode === 'daily';
+    optGhost.disabled = settings.twoPlayer;
+  }
+
   function populateSettingsUI() {
+    optMode.value = settings.mode;
     optGrid.value = settings.grid;
-    optWrap.checked = settings.wrap;
+    optWrap.checked = settings.mode === 'zen' ? true : (settings.mode === 'daily' ? false : settings.wrap);
     optDifficulty.value = settings.difficulty;
     optVolume.value = Math.round(settings.volume * 100);
+    optMusic.checked = settings.music;
     optTwoPlayer.checked = settings.twoPlayer;
+    optGhost.checked = settings.ghost;
     optTheme.value = settings.theme;
+    optColorblind.checked = settings.colorblind;
+    optReducedMotion.checked = settings.reducedMotion;
+    populateSkinSelect();
+    populateLayoutSelect();
+    updateModeDependentUI();
   }
 
   let best = Number(localStorage.getItem(BEST_KEY)) || 0;
   bestEl.textContent = best;
   let muted = localStorage.getItem(MUTE_KEY) === '1';
   muteBtn.textContent = muted ? '🔇' : '🔊';
+  musicBtn.classList.toggle('active', settings.music);
 
   // ---------- sound ----------
   let audioCtx = null;
@@ -493,10 +801,44 @@
     if (!muted) { ensureAudio(); beep({ freq: 500, duration: 0.05, volume: 0.1 }); }
   });
 
+  // ---------- background music ----------
+  const MUSIC_NOTES = [261.6, 293.7, 329.6, 392.0, 440.0, 523.3];
+  let musicTimer = null;
+  function startMusic() {
+    if (musicTimer) return;
+    musicTimer = setInterval(() => {
+      if (gameState !== 'playing' || !settings.music || muted) return;
+      const freq = MUSIC_NOTES[Math.floor(Math.random() * MUSIC_NOTES.length)];
+      beep({ freq, duration: 0.5, type: 'sine', volume: 0.045 });
+    }, 850);
+  }
+  function stopMusic() { clearInterval(musicTimer); musicTimer = null; }
+
+  musicBtn.addEventListener('click', () => {
+    settings.music = !settings.music;
+    saveSettings();
+    musicBtn.classList.toggle('active', settings.music);
+    if (settings.music) { ensureAudio(); startMusic(); }
+  });
+
+  fullscreenBtn.addEventListener('click', () => {
+    try {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+      else document.exitFullscreen?.().catch(() => {});
+    } catch { /* fullscreen unavailable — ignore */ }
+  });
+
   // ---------- canvas / grid sizing ----------
   let cols, rows, cssSize;
+  function effectiveGrid() { return settings.mode === 'daily' ? 'medium' : settings.grid; }
+  function effectiveDifficultyKey() { return settings.mode === 'daily' ? 'normal' : settings.difficulty; }
+  function effectiveWrap() {
+    if (settings.mode === 'zen') return true;
+    if (settings.mode === 'daily') return false;
+    return settings.wrap;
+  }
   function resizeCanvasIfNeeded() {
-    const newCols = GRID_SIZES[settings.grid] || 20;
+    const newCols = GRID_SIZES[effectiveGrid()] || 20;
     if (newCols === cols) return;
     cols = newCols;
     rows = newCols;
@@ -509,8 +851,23 @@
     ctx.scale(dpr, dpr);
   }
 
+  // ---------- seeded RNG for Daily Challenge ----------
+  function mulberry32(seed) {
+    return function () {
+      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function dailySeed() {
+    const d = new Date();
+    return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+  }
+  let rand = Math.random;
+
   // ---------- game state ----------
-  let gameState = 'ready'; // ready | countdown | playing | paused | gameover
+  let gameState = 'ready'; // ready | countdown | playing | paused | gameover | editor
   let snake, prevSnake, dir, nextDir, score;
   let snake2, prevSnake2, dir2, nextDir2, score2;
   let food, obstacles, level, speedMs, timer;
@@ -518,13 +875,27 @@
   let frenzyUntil = 0, slomoUntil = 0, shakeUntil = 0;
   let wasFrenzy = false, wasSlomo = false;
   let particles = [];
+  let combo = { 1: { count: 0, last: 0 }, 2: { count: 0, last: 0 } };
+  const COMBO_WINDOW = 3000;
+  let timeRemaining = 0, timeInterval = null;
+  let runTrail = [], ghostTrail = null, ghostIndex = 0;
+  let pendingScoreKey = null;
 
-  function currentDifficulty() { return DIFFICULTY[settings.difficulty] || DIFFICULTY.normal; }
+  function currentDifficulty() { return DIFFICULTY[effectiveDifficultyKey()] || DIFFICULTY.normal; }
+
+  function loadCustomLayout() {
+    if (settings.mode !== 'classic' || !settings.layoutName) return null;
+    const layouts = safeParseArr(localStorage.getItem(LAYOUTS_KEY));
+    const found = layouts.find(l => l.name === settings.layoutName && GRID_SIZES[l.grid] === cols);
+    return found ? found.obstacles.map(o => ({ ...o })) : null;
+  }
 
   function reset() {
     resizeCanvasIfNeeded();
+    clearInterval(timeInterval);
+    rand = settings.mode === 'daily' ? mulberry32(dailySeed()) : Math.random;
     const midY = Math.floor(rows / 2);
-    if (settings.twoPlayer) {
+    if (settings.twoPlayer && settings.mode === 'classic') {
       const x1 = Math.max(2, Math.floor(cols * 0.25));
       const x2 = Math.min(cols - 3, Math.floor(cols * 0.75));
       const y1 = Math.max(1, midY - 2);
@@ -547,17 +918,28 @@
     score = 0;
     score2 = 0;
     level = 1;
-    obstacles = [];
+    food = null;
+    obstacles = loadCustomLayout() || [];
     frenzyUntil = 0;
     slomoUntil = 0;
     wasFrenzy = false;
     wasSlomo = false;
     particles = [];
+    combo = { 1: { count: 0, last: 0 }, 2: { count: 0, last: 0 } };
     speedMs = currentDifficulty().start;
+    runTrail = [{ ...snake[0] }];
+    ghostIndex = 0;
+    ghostTrail = (settings.ghost && !settings.twoPlayer)
+      ? safeParse(localStorage.getItem(GHOST_KEY_PREFIX + settings.mode))
+      : null;
+    if (!ghostTrail || !Array.isArray(ghostTrail.trail)) ghostTrail = null;
     scoreEl.textContent = score;
     score2El.textContent = score2;
     levelEl.textContent = level;
-    score2Wrap.classList.toggle('hidden', !settings.twoPlayer);
+    score2Wrap.classList.toggle('hidden', !(settings.twoPlayer && settings.mode === 'classic'));
+    timeWrap.classList.toggle('hidden', settings.mode !== 'time');
+    timeRemaining = 60;
+    timeEl.textContent = timeRemaining;
     placeFood();
     lastStepTime = performance.now();
   }
@@ -572,7 +954,7 @@
     const occ = occupiedCells();
     let pos, tries = 0;
     do {
-      pos = { x: Math.floor(Math.random() * cols), y: Math.floor(Math.random() * rows) };
+      pos = { x: Math.floor(rand() * cols), y: Math.floor(rand() * rows) };
       tries++;
     } while (occ.some(s => s.x === pos.x && s.y === pos.y) && tries < 200);
     const type = pickFoodType();
@@ -580,7 +962,7 @@
   }
 
   function pickFoodType() {
-    const r = Math.random();
+    const r = rand();
     if (r < 0.06) return 'golden';
     if (r < 0.12) return 'speed';
     if (r < 0.18) return 'slow';
@@ -589,12 +971,13 @@
   }
 
   function addObstacle() {
+    if (settings.mode === 'zen') return;
     if (obstacles.length >= 14) return;
     const occ = occupiedCells();
     const heads = [snake[0], snake2[0]].filter(Boolean);
     let pos, tries = 0;
     do {
-      pos = { x: Math.floor(Math.random() * cols), y: Math.floor(Math.random() * rows) };
+      pos = { x: Math.floor(rand() * cols), y: Math.floor(rand() * rows) };
       tries++;
     } while (
       tries < 200 &&
@@ -604,22 +987,18 @@
     if (tries < 200) obstacles.push(pos);
   }
 
-  function showLevelToast(n) {
-    levelToast.textContent = `Level ${n}!`;
-    levelToast.classList.add('show');
-    clearTimeout(showLevelToast._t);
-    showLevelToast._t = setTimeout(() => levelToast.classList.remove('show'), 1200);
-  }
-
   function maybeLevelUp() {
-    const leading = settings.twoPlayer ? Math.max(score, score2) : score;
+    const leading = (settings.twoPlayer && settings.mode === 'classic') ? Math.max(score, score2) : score;
     const newLevel = Math.floor(leading / 5) + 1;
     if (newLevel > level) {
       level = newLevel;
       levelEl.textContent = level;
       addObstacle();
-      showLevelToast(level);
+      showToast(levelToast, `Level ${level}!`);
       sfx.levelUp();
+      stats.maxLevel = Math.max(stats.maxLevel, level);
+      saveStats();
+      checkAchievements();
     }
   }
 
@@ -653,6 +1032,7 @@
 
   // ---------- particles ----------
   function spawnParticles(cellX, cellY, color) {
+    if (settings.reducedMotion) return;
     const cx = cellX * CELL + CELL / 2, cy = cellY * CELL + CELL / 2;
     for (let i = 0; i < 14; i++) {
       const angle = Math.random() * Math.PI * 2;
@@ -679,7 +1059,7 @@
     });
   }
 
-  // ---------- effects (frenzy / slow-mo) ----------
+  // ---------- effects (frenzy / slow-mo / combo) ----------
   function effectsActive() {
     const now = performance.now();
     return { frenzy: now < frenzyUntil, slomo: now < slomoUntil };
@@ -697,13 +1077,20 @@
       wasFrenzy = frenzy; wasSlomo = slomo;
       if (gameState === 'playing') restartTimer();
     }
+    const now = performance.now();
+    [1, 2].forEach(p => {
+      if (combo[p].count > 0 && now - combo[p].last > COMBO_WINDOW) combo[p].count = 0;
+    });
     effectBadges.innerHTML = '';
     if (frenzy) effectBadges.innerHTML += '<span class="badge">⚡ Frenzy</span>';
     if (slomo) effectBadges.innerHTML += '<span class="badge">❄ Slow-mo</span>';
+    if (combo[1].count >= 2) effectBadges.innerHTML += `<span class="badge">🔥 P1 x${Math.min(5, combo[1].count)}</span>`;
+    if (settings.twoPlayer && combo[2].count >= 2) effectBadges.innerHTML += `<span class="badge">🔥 P2 x${Math.min(5, combo[2].count)}</span>`;
   }
 
   // ---------- screen shake ----------
   function getShakeOffset() {
+    if (settings.reducedMotion) return { x: 0, y: 0 };
     const now = performance.now();
     if (now >= shakeUntil) return { x: 0, y: 0 };
     const remaining = shakeUntil - now;
@@ -743,7 +1130,7 @@
     if (!food) return;
     const info = FOOD_TYPES[food.type] || FOOD_TYPES.normal;
     const isGolden = food.type === 'golden';
-    const bob = Math.sin(performance.now() / 260) * 1.2;
+    const bob = settings.reducedMotion ? 0 : Math.sin(performance.now() / 260) * 1.2;
     const fx = food.x * CELL + CELL / 2;
     const fy = food.y * CELL + CELL / 2 + bob;
     const appleR = CELL / 2 - 3;
@@ -801,6 +1188,31 @@
     }
   }
 
+  function drawGhost() {
+    if (!ghostTrail || !ghostTrail.trail.length || gameState !== 'playing') return;
+    const idx = Math.min(ghostIndex, ghostTrail.trail.length - 1);
+    const p = ghostTrail.trail[idx];
+    if (!p) return;
+    const gx = p.x * CELL + CELL / 2, gy = p.y * CELL + CELL / 2;
+    ctx.strokeStyle = 'rgba(226,232,240,0.55)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.arc(gx, gy, CELL / 2 - 3, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function getP1Colors() {
+    const skin = SKINS[settings.skin] || SKINS.classic;
+    if (skin.rainbow) return { rainbow: true };
+    return {
+      head: skin.head || getCss('--snake-head'),
+      light: skin.light || getCss('--snake-light'),
+      dark: skin.dark || getCss('--snake-dark'),
+    };
+  }
+
   function renderSnake(snakeArr, prevArr, curDir, nxtDir, colors, alpha) {
     const n = snakeArr.length;
     if (n === 0) return;
@@ -821,7 +1233,9 @@
       const size = CELL - 2 - t * 4;
       const cx = p.x * CELL + CELL / 2;
       const cy = p.y * CELL + CELL / 2;
-      ctx.fillStyle = i === 0 ? colors.head : mixColor(colors.light, colors.dark, t);
+      ctx.fillStyle = colors.rainbow
+        ? `hsl(${Math.round((i * 18 + performance.now() / 15) % 360)}, 80%, ${i === 0 ? 55 : 60}%)`
+        : (i === 0 ? colors.head : mixColor(colors.light, colors.dark, t));
       roundRectPath(cx - size / 2, cy - size / 2, size, size, size / 3);
       ctx.fill();
     }
@@ -841,7 +1255,7 @@
       ctx.beginPath(); ctx.arc(eyeX - ex * 0.6, eyeY - ey * 0.6, 0.8, 0, Math.PI * 2); ctx.fill();
     });
 
-    if (gameState === 'playing') {
+    if (gameState === 'playing' && !settings.reducedMotion) {
       const flick = Math.sin(performance.now() / 90) > 0.4;
       if (flick) {
         const tx = hx + ex * (CELL / 2);
@@ -869,10 +1283,10 @@
     drawGrid();
     drawObstacles();
     drawFood();
+    if (settings.ghost && !settings.twoPlayer) drawGhost();
 
-    const p1Colors = { head: getCss('--snake-head'), light: getCss('--snake-light'), dark: getCss('--snake-dark') };
-    renderSnake(snake, prevSnake, dir, nextDir, p1Colors, alpha);
-    if (settings.twoPlayer) {
+    renderSnake(snake, prevSnake, dir, nextDir, getP1Colors(), alpha);
+    if (settings.twoPlayer && settings.mode === 'classic') {
       const p2Colors = { head: getCss('--p2-head'), light: getCss('--p2-light'), dark: getCss('--p2-dark') };
       renderSnake(snake2, prevSnake2, dir2, nextDir2, p2Colors, alpha);
     }
@@ -885,13 +1299,14 @@
   function sameCell(a, b) { return a.x === b.x && a.y === b.y; }
 
   function wrapPosition(p) {
-    if (!settings.wrap) return;
+    if (!effectiveWrap()) return;
     p.x = (p.x + cols) % cols;
     p.y = (p.y + rows) % rows;
   }
 
   function checkDeath(bodyArr, head) {
-    if (!settings.wrap && (head.x < 0 || head.x >= cols || head.y < 0 || head.y >= rows)) return true;
+    if (settings.mode === 'zen') return false;
+    if (!effectiveWrap() && (head.x < 0 || head.x >= cols || head.y < 0 || head.y >= rows)) return true;
     if (obstacles.some(o => o.x === head.x && o.y === head.y)) return true;
     if (bodyArr.some(s => s.x === head.x && s.y === head.y)) return true;
     return false;
@@ -918,12 +1333,27 @@
     const type = food.type;
     const info = FOOD_TYPES[type];
     const { frenzy } = effectsActive();
-    const multiplier = frenzy ? 2 : 1;
-    addScore(player, info.points * multiplier);
+    const frenzyMultiplier = frenzy ? 2 : 1;
+
+    const now = performance.now();
+    const c = combo[player];
+    c.count = (now - c.last < COMBO_WINDOW) ? c.count + 1 : 1;
+    c.last = now;
+    if (c.count > stats.comboMax) { stats.comboMax = c.count; saveStats(); checkAchievements(); }
+    const comboMultiplier = Math.min(5, c.count);
+
+    addScore(player, info.points * frenzyMultiplier * comboMultiplier);
     spawnParticles(food.x, food.y, info.ring || getCss('--food'));
     sfx.eat(type);
-    if (type === 'speed') frenzyUntil = performance.now() + 5000;
-    if (type === 'slow') slomoUntil = performance.now() + 5000;
+
+    stats.applesEaten++;
+    if (type === 'golden') stats.goldenEaten++;
+    if (type === 'speed') stats.speedEaten++;
+    saveStats();
+    checkAchievements();
+
+    if (type === 'speed') frenzyUntil = now + 5000;
+    if (type === 'slow') slomoUntil = now + 5000;
     let extraShrink = 0;
     if (type === 'shrink') {
       const arr = player === 1 ? snake : snake2;
@@ -942,7 +1372,8 @@
     let dead1 = checkDeath(snake, head1);
 
     let head2 = null, dead2 = false;
-    if (settings.twoPlayer) {
+    const twoP = settings.twoPlayer && settings.mode === 'classic';
+    if (twoP) {
       dir2 = nextDir2;
       head2 = { x: snake2[0].x + dir2.x, y: snake2[0].y + dir2.y };
       wrapPosition(head2);
@@ -952,15 +1383,21 @@
       if (!dead2 && snake.some(s => sameCell(s, head2))) dead2 = true;
     }
 
-    if (dead1 || dead2) { gameOver(dead1, dead2); return; }
+    if (dead1 || dead2) { gameOver(dead1, dead2, 'collision'); return; }
 
     prevSnake = snake.map(s => ({ ...s }));
     snake.unshift(head1);
     const ate1 = eatIfPossible(head1, 1);
     if (!ate1.grow) snake.pop();
     for (let i = 0; i < ate1.extraShrink; i++) if (snake.length > 3) snake.pop();
+    stats.longestSnake = Math.max(stats.longestSnake, snake.length);
 
-    if (settings.twoPlayer) {
+    if (!twoP) {
+      runTrail.push({ ...head1 });
+      ghostIndex++;
+    }
+
+    if (twoP) {
       prevSnake2 = snake2.map(s => ({ ...s }));
       snake2.unshift(head2);
       const ate2 = eatIfPossible(head2, 2);
@@ -987,7 +1424,7 @@
       placeFood();
     }
     const alpha = gameState === 'playing' ? Math.min((now - lastStepTime) / effectiveSpeed(), 1) : 1;
-    draw(alpha);
+    if (gameState !== 'editor') draw(alpha);
     requestAnimationFrame(renderLoop);
   }
 
@@ -1001,9 +1438,13 @@
 
   function showReadyUI() {
     overlayTitle.textContent = 'Ready?';
-    overlayMsg.textContent = settings.twoPlayer
-      ? 'P1: Arrow keys · P2: WASD'
-      : 'Use arrow keys or WASD to move';
+    const modeHint = {
+      classic: settings.twoPlayer ? 'P1: Arrow keys · P2: WASD' : 'Use arrow keys or WASD to move',
+      zen: 'Relax — no walls, no death. Press ⏹ to stop.',
+      time: '60 seconds. Score as much as you can!',
+      daily: "Today's board — same for every attempt today.",
+    };
+    overlayMsg.textContent = modeHint[settings.mode] || modeHint.classic;
     highscoreEntry.classList.add('hidden');
     overlayActions.classList.remove('hidden');
     copyScoreBtn.classList.add('hidden');
@@ -1031,25 +1472,37 @@
     if (gameState === 'ready') showReadyUI();
   }
 
-  function checkHighScoreQualifies(s) {
-    const list = loadHighScores();
+  function scoreKeyForMode(mode) {
+    if (mode === 'time') return 'snake-highscores-time-v1';
+    if (mode === 'zen') return 'snake-highscores-zen-v1';
+    if (mode === 'daily') return 'snake-highscores-daily-' + dailySeed();
+    return SCORES_KEY;
+  }
+
+  function checkHighScoreQualifies(key, s) {
+    const list = loadHighScores(key);
     return s > 0 && (list.length < 5 || s > list[list.length - 1].score);
   }
 
-  function loadHighScores() {
-    const arr = safeParse(localStorage.getItem(SCORES_KEY));
-    return Array.isArray(arr) ? arr : [];
+  function loadHighScores(key) {
+    return safeParseArr(localStorage.getItem(key));
   }
 
-  function saveHighScore(name, s) {
-    const list = loadHighScores();
+  function saveHighScore(key, name, s) {
+    const list = loadHighScores(key);
     list.push({ name: name || 'Player', score: s });
     list.sort((a, b) => b.score - a.score);
-    localStorage.setItem(SCORES_KEY, JSON.stringify(list.slice(0, 5)));
+    localStorage.setItem(key, JSON.stringify(list.slice(0, 5)));
   }
 
-  function renderHighScores() {
-    const list = loadHighScores();
+  function renderHighScores(key) {
+    const titles = {
+      [SCORES_KEY]: 'High Scores',
+      'snake-highscores-time-v1': 'Time Attack — Best Runs',
+      'snake-highscores-zen-v1': 'Zen — Best Runs',
+    };
+    scoresTitle.textContent = titles[key] || "Today's Attempts";
+    const list = loadHighScores(key);
     scoresList.innerHTML = '';
     scoresEmpty.classList.toggle('hidden', list.length > 0);
     list.forEach(entry => {
@@ -1063,9 +1516,20 @@
     return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
-  function gameOver(dead1, dead2) {
+  function maybeSaveGhost() {
+    if (settings.twoPlayer && settings.mode === 'classic') return;
+    const key = GHOST_KEY_PREFIX + settings.mode;
+    const existing = safeParse(localStorage.getItem(key));
+    if (!existing || !existing.score || score >= existing.score) {
+      localStorage.setItem(key, JSON.stringify({ score, trail: runTrail }));
+    }
+  }
+
+  function gameOver(dead1, dead2, reason) {
     gameState = 'gameover';
     clearInterval(timer);
+    clearInterval(timeInterval);
+    zenStopBtn.classList.add('hidden');
     shakeUntil = performance.now() + 400;
     sfx.gameOver();
 
@@ -1073,20 +1537,35 @@
     startBtn.textContent = 'Play Again';
     copyScoreBtn.classList.remove('hidden');
 
-    if (settings.twoPlayer) {
+    const twoP = settings.twoPlayer && settings.mode === 'classic';
+    if (twoP) {
       let title;
-      if (dead1 && dead2) title = "It's a Tie!";
-      else if (dead1) title = 'Player 2 Wins!';
-      else title = 'Player 1 Wins!';
+      if (dead1 && dead2) { title = "It's a Tie!"; stats.ties++; }
+      else if (dead1) { title = 'Player 2 Wins!'; stats.p2Wins++; }
+      else { title = 'Player 1 Wins!'; stats.p1Wins++; }
+      saveStats();
+      checkAchievements();
       overlayTitle.textContent = title;
       overlayMsg.textContent = `P1: ${score} · P2: ${score2}`;
       highscoreEntry.classList.add('hidden');
       copyScoreBtn.dataset.text = `${title} P1: ${score} · P2: ${score2} in Snake! 🐍`;
     } else {
-      overlayTitle.textContent = 'Game Over';
+      if (settings.mode === 'zen') overlayTitle.textContent = 'Run Complete!';
+      else if (reason === 'time') overlayTitle.textContent = "Time's Up!";
+      else overlayTitle.textContent = 'Game Over';
       overlayMsg.textContent = `Score: ${score} — Best: ${best}`;
-      copyScoreBtn.dataset.text = `I scored ${score} points in Snake! 🐍🍎`;
-      if (checkHighScoreQualifies(score)) {
+      copyScoreBtn.dataset.text = `I scored ${score} points in Snake (${settings.mode}) 🐍🍎`;
+
+      if (!settings.twoPlayer && settings.difficulty === 'hard' && settings.mode === 'classic') {
+        stats.hardBest = Math.max(stats.hardBest, score);
+        saveStats();
+        checkAchievements();
+      }
+
+      maybeSaveGhost();
+
+      pendingScoreKey = scoreKeyForMode(settings.mode);
+      if (checkHighScoreQualifies(pendingScoreKey, score)) {
         highscoreEntry.classList.remove('hidden');
         nameInput.value = '';
       } else {
@@ -1096,10 +1575,16 @@
     overlay.classList.remove('hidden');
   }
 
+  function timeUp() { gameOver(false, false, 'time'); }
+
+  zenStopBtn.addEventListener('click', () => {
+    if (gameState === 'playing' && settings.mode === 'zen') gameOver(true, false, 'stopped');
+  });
+
   saveScoreBtn.addEventListener('click', () => {
-    saveHighScore(nameInput.value.trim(), score);
+    saveHighScore(pendingScoreKey || SCORES_KEY, nameInput.value.trim(), score);
     highscoreEntry.classList.add('hidden');
-    renderHighScores();
+    renderHighScores(pendingScoreKey || SCORES_KEY);
   });
 
   copyScoreBtn.addEventListener('click', async () => {
@@ -1134,35 +1619,176 @@
       overlay.classList.add('hidden');
       sfx.start();
       restartTimer();
+      if (settings.music) startMusic();
+      zenStopBtn.classList.toggle('hidden', settings.mode !== 'zen');
+      stats.gamesPlayed++;
+      if (settings.mode === 'daily') stats.dailyPlays++;
+      saveStats();
+      checkAchievements();
+      if (settings.mode === 'time') {
+        timeRemaining = 60;
+        timeEl.textContent = timeRemaining;
+        clearInterval(timeInterval);
+        timeInterval = setInterval(() => {
+          if (gameState !== 'playing') return;
+          timeRemaining--;
+          timeEl.textContent = Math.max(0, timeRemaining);
+          if (timeRemaining <= 0) { clearInterval(timeInterval); timeUp(); }
+        }, 1000);
+      }
     });
   }
 
   startBtn.addEventListener('click', startGame);
-  viewScoresBtn.addEventListener('click', () => { renderHighScores(); scoresModal.classList.remove('hidden'); });
+  viewScoresBtn.addEventListener('click', () => {
+    const key = scoreKeyForMode(settings.mode);
+    renderHighScores(key);
+    scoresModal.classList.remove('hidden');
+  });
   scoresClose.addEventListener('click', () => scoresModal.classList.add('hidden'));
 
   settingsBtn.addEventListener('click', () => { populateSettingsUI(); settingsModal.classList.remove('hidden'); });
   settingsClose.addEventListener('click', () => settingsModal.classList.add('hidden'));
 
+  optMode.addEventListener('change', e => {
+    settings.mode = e.target.value;
+    if (settings.mode !== 'classic') settings.twoPlayer = false;
+    saveSettings();
+    updateModeDependentUI();
+    optTwoPlayer.checked = settings.twoPlayer;
+    refreshReadyIfIdle();
+  });
   optGrid.addEventListener('change', e => { settings.grid = e.target.value; saveSettings(); });
   optWrap.addEventListener('change', e => { settings.wrap = e.target.checked; saveSettings(); });
   optDifficulty.addEventListener('change', e => { settings.difficulty = e.target.value; saveSettings(); });
+  optLayout.addEventListener('change', e => { settings.layoutName = e.target.value; saveSettings(); });
   optVolume.addEventListener('input', e => { settings.volume = Number(e.target.value) / 100; saveSettings(); });
+  optMusic.addEventListener('change', e => {
+    settings.music = e.target.checked;
+    saveSettings();
+    musicBtn.classList.toggle('active', settings.music);
+    if (settings.music) { ensureAudio(); startMusic(); }
+  });
   optTwoPlayer.addEventListener('change', e => {
     settings.twoPlayer = e.target.checked;
     saveSettings();
-    score2Wrap.classList.toggle('hidden', !settings.twoPlayer);
+    score2Wrap.classList.toggle('hidden', !(settings.twoPlayer && settings.mode === 'classic'));
+    updateModeDependentUI();
     refreshReadyIfIdle();
   });
+  optSkin.addEventListener('change', e => { settings.skin = e.target.value; saveSettings(); });
+  optGhost.addEventListener('change', e => { settings.ghost = e.target.checked; saveSettings(); });
   optTheme.addEventListener('change', e => { settings.theme = e.target.value; saveSettings(); applyTheme(); });
+  optColorblind.addEventListener('change', e => { settings.colorblind = e.target.checked; saveSettings(); applyColorblind(); });
+  optReducedMotion.addEventListener('change', e => { settings.reducedMotion = e.target.checked; saveSettings(); });
+
+  // ---------- controls (keybinding) modal ----------
+  let awaitingRebind = null;
+  function keyLabel(k) { return k.length === 1 ? k.toUpperCase() : k.replace('Arrow', ''); }
+  function renderControlsUI() {
+    document.querySelectorAll('.keybtn').forEach(btn => {
+      const p = btn.dataset.player, a = btn.dataset.action;
+      btn.textContent = keyLabel(settings.keymap[p][a]);
+    });
+  }
+  document.querySelectorAll('.keybtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      awaitingRebind = { player: btn.dataset.player, action: btn.dataset.action };
+      btn.textContent = '…';
+    });
+  });
+  controlsReset.addEventListener('click', () => {
+    settings.keymap = JSON.parse(JSON.stringify(DEFAULT_KEYMAP));
+    saveSettings();
+    renderControlsUI();
+  });
+  openControlsBtn.addEventListener('click', () => { renderControlsUI(); controlsModal.classList.remove('hidden'); });
+  controlsClose.addEventListener('click', () => controlsModal.classList.add('hidden'));
+
+  // ---------- achievements modal ----------
+  function renderAchievements() {
+    achvList.innerHTML = '';
+    ACHIEVEMENTS.forEach(a => {
+      const unlocked = stats.unlocked.includes(a.id);
+      const li = document.createElement('li');
+      li.className = 'achv-row' + (unlocked ? '' : ' locked');
+      li.innerHTML = `<span>${unlocked ? '✅' : '🔒'}</span><span class="achv-name">${escapeHtml(a.name)}</span><span>— ${escapeHtml(a.desc)}</span>`;
+      achvList.appendChild(li);
+    });
+  }
+  openAchvBtn.addEventListener('click', () => { renderAchievements(); achvModal.classList.remove('hidden'); });
+  achvClose.addEventListener('click', () => achvModal.classList.add('hidden'));
+
+  // ---------- stats modal ----------
+  function renderStats() {
+    const rows = [
+      ['Games played', stats.gamesPlayed],
+      ['Apples eaten', stats.applesEaten],
+      ['Longest snake', stats.longestSnake],
+      ['Best score (classic)', best],
+      ['Highest level reached', stats.maxLevel],
+      ['Golden apples eaten', stats.goldenEaten],
+      ['Best combo', `x${stats.comboMax}`],
+      ['Best score (Hard)', stats.hardBest],
+      ['P1 wins', stats.p1Wins],
+      ['P2 wins', stats.p2Wins],
+      ['Ties', stats.ties],
+      ['Daily challenges played', stats.dailyPlays],
+    ];
+    statsGrid.innerHTML = rows.map(([label, val]) => `<div>${escapeHtml(label)}</div><span>${escapeHtml(String(val))}</span>`).join('');
+  }
+  openStatsBtn.addEventListener('click', () => { renderStats(); statsModal.classList.remove('hidden'); });
+  statsClose.addEventListener('click', () => statsModal.classList.add('hidden'));
+
+  // ---------- level editor ----------
+  function enterEditor() {
+    settingsModal.classList.add('hidden');
+    resizeCanvasIfNeeded();
+    obstacles = [];
+    gameState = 'editor';
+    overlay.classList.add('hidden');
+    editorBar.classList.remove('hidden');
+    draw(1);
+  }
+  function exitEditor() {
+    editorBar.classList.add('hidden');
+    gameState = 'ready';
+    showReadyUI();
+  }
+  openEditorBtn.addEventListener('click', enterEditor);
+  editorExitBtn.addEventListener('click', exitEditor);
+  editorClearBtn.addEventListener('click', () => { obstacles = []; draw(1); });
+  editorSaveBtn.addEventListener('click', () => {
+    const name = layoutNameInput.value.trim() || `Layout ${Date.now() % 10000}`;
+    const layouts = safeParseArr(localStorage.getItem(LAYOUTS_KEY)).filter(l => l.name !== name);
+    layouts.push({ name, grid: settings.grid, obstacles: obstacles.map(o => ({ ...o })) });
+    localStorage.setItem(LAYOUTS_KEY, JSON.stringify(layouts.slice(-10)));
+    populateLayoutSelect();
+    layoutNameInput.value = '';
+  });
+  canvas.addEventListener('click', (e) => {
+    if (gameState !== 'editor') return;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = cssSize / rect.width;
+    const scaleY = cssSize / rect.height;
+    const x = Math.floor((e.clientX - rect.left) * scaleX / CELL);
+    const y = Math.floor((e.clientY - rect.top) * scaleY / CELL);
+    if (x < 0 || x >= cols || y < 0 || y >= rows) return;
+    const idx = obstacles.findIndex(o => o.x === x && o.y === y);
+    if (idx >= 0) obstacles.splice(idx, 1);
+    else obstacles.push({ x, y });
+    draw(1);
+  });
 
   // ---------- input ----------
-  const P1_ARROWS = {
-    ArrowUp: { x: 0, y: -1 }, ArrowDown: { x: 0, y: 1 }, ArrowLeft: { x: -1, y: 0 }, ArrowRight: { x: 1, y: 0 },
-  };
-  const WASD = {
-    w: { x: 0, y: -1 }, s: { x: 0, y: 1 }, a: { x: -1, y: 0 }, d: { x: 1, y: 0 },
-  };
+  function dirForKey(map, key) {
+    const lower = key.length === 1 ? key.toLowerCase() : key;
+    for (const action of ['up', 'down', 'left', 'right']) {
+      const mapped = map[action];
+      if (mapped === key || (mapped.length === 1 && mapped.toLowerCase() === lower)) return ACTION_DIRS[action];
+    }
+    return null;
+  }
 
   function trySetDir(player, newDir) {
     if (gameState !== 'playing') return;
@@ -1179,21 +1805,29 @@
   }
 
   document.addEventListener('keydown', (e) => {
+    if (awaitingRebind) {
+      e.preventDefault();
+      settings.keymap[awaitingRebind.player][awaitingRebind.action] = e.key;
+      saveSettings();
+      renderControlsUI();
+      awaitingRebind = null;
+      return;
+    }
     if (e.key === ' ') {
       if (gameState === 'playing') setState('paused');
       else if (gameState === 'paused') { lastStepTime = performance.now(); setState('playing'); }
       e.preventDefault();
       return;
     }
-    if (P1_ARROWS[e.key]) {
-      trySetDir(1, P1_ARROWS[e.key]);
-      e.preventDefault();
-      return;
-    }
-    const lower = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-    if (WASD[lower]) {
-      trySetDir(settings.twoPlayer ? 2 : 1, WASD[lower]);
-      e.preventDefault();
+    const twoP = settings.twoPlayer && settings.mode === 'classic';
+    const d1 = dirForKey(settings.keymap.p1, e.key);
+    if (d1) { trySetDir(1, d1); e.preventDefault(); return; }
+    if (twoP) {
+      const d2 = dirForKey(settings.keymap.p2, e.key);
+      if (d2) { trySetDir(2, d2); e.preventDefault(); return; }
+    } else {
+      const dAlt = dirForKey(settings.keymap.p2, e.key);
+      if (dAlt) { trySetDir(1, dAlt); e.preventDefault(); }
     }
   });
 
@@ -1221,9 +1855,9 @@
 
   // ---------- init ----------
   applyTheme();
+  applyColorblind();
   populateSettingsUI();
   resizeCanvasIfNeeded();
-  renderHighScores();
   reset();
   draw(1);
   showReadyUI();
