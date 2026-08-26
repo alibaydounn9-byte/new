@@ -335,7 +335,7 @@
   <h1>🐍 SNAKE</h1>
   <div id="hud">
     <div class="hud-score">P1 <span id="score">0</span></div>
-    <div class="hud-score hidden" id="score2-wrap">P2 <span id="score2">0</span></div>
+    <div class="hud-score hidden" id="score2-wrap"><span id="score2-label">P2</span> <span id="score2">0</span></div>
     <div class="hud-score">Best <span id="best">0</span></div>
     <div class="hud-score">Lv <span id="level">1</span></div>
     <div class="hud-score hidden" id="time-wrap">⏱ <span id="time-left">60</span>s</div>
@@ -344,6 +344,7 @@
     <button class="icon-btn" id="mute-btn" title="Toggle sound">🔊</button>
     <button class="icon-btn" id="music-btn" title="Toggle music">🎵</button>
     <button class="icon-btn" id="fullscreen-btn" title="Fullscreen">⛶</button>
+    <button class="icon-btn" id="help-btn" title="How to play">?</button>
     <button class="icon-btn" id="settings-btn" title="Settings">⚙️</button>
   </div>
 
@@ -372,11 +373,11 @@
     </div>
   </div>
 
-  <p id="hint">Space to pause · Eat apples to grow. Watch for obstacles and power-ups!</p>
+  <p id="hint">Space to pause · Hold Shift to boost · Eat apples to grow. Watch for obstacles and power-ups!</p>
 
   <div id="touch-controls">
     <div></div><button data-dir="up">▲</button><div></div>
-    <button data-dir="left">◀</button><div></div><button data-dir="right">▶</button>
+    <button data-dir="left">◀</button><button id="boost-btn" class="secondary" title="Hold to boost">⚡</button><button data-dir="right">▶</button>
     <div></div><button data-dir="down">▼</button><div></div>
   </div>
 
@@ -408,6 +409,7 @@
           <option value="easy">Easy</option>
           <option value="normal">Normal</option>
           <option value="hard">Hard</option>
+          <option value="insane">Insane</option>
         </select>
       </label>
       <label>Custom layout
@@ -422,7 +424,15 @@
         <input type="range" id="opt-volume" min="0" max="100" step="5">
       </label>
       <label class="row"><input type="checkbox" id="opt-music"> Background music</label>
+      <label class="row"><input type="checkbox" id="opt-vibration"> Vibration feedback (mobile)</label>
+      <label>Sound theme
+        <select id="opt-soundtheme">
+          <option value="arcade">Arcade</option>
+          <option value="chiptune">Chiptune (retro 8-bit)</option>
+        </select>
+      </label>
       <label class="row"><input type="checkbox" id="opt-twoplayer"> Two-player (P1: Arrows · P2: WASD)</label>
+      <label class="row"><input type="checkbox" id="opt-vsai"> Play vs AI (single player)</label>
       <label>Snake skin
         <select id="opt-skin"></select>
       </label>
@@ -444,6 +454,12 @@
         <button class="secondary tiny" id="open-stats-btn">Stats</button>
         <button class="secondary tiny" id="open-editor-btn">Level Editor</button>
         <button class="secondary tiny" id="open-graphics-btn">Graphics</button>
+      </div>
+      <hr class="modal-divider">
+      <div class="link-row">
+        <button class="secondary tiny" id="export-save-btn">Export Save Data</button>
+        <button class="secondary tiny" id="import-save-btn">Import Save Data</button>
+        <input type="file" id="import-save-input" accept="application/json" class="hidden">
       </div>
       <p class="modal-hint">Grid size, difficulty, wrap, layout and mode apply on your next game.</p>
       <div class="modal-actions">
@@ -533,6 +549,19 @@
     </div>
   </div>
 
+  <div id="tutorial-modal" class="modal hidden">
+    <div class="modal-card">
+      <h2>How to Play</h2>
+      <p class="modal-hint">Use arrow keys or WASD to steer. Eat apples to grow — watch out for walls, obstacles, and your own tail.</p>
+      <p class="modal-hint">Special apples do different things: ⭐ bonus points, ⚡ speed frenzy, ❄ slow-mo, ✂ shrinks your tail, 🔨 destroys an obstacle.</p>
+      <p class="modal-hint">Hold Shift (or the ⚡ button on mobile) to boost — it costs a bit of length. Space pauses the game.</p>
+      <p class="modal-hint">Check ⚙️ Settings for game modes, difficulty, two-player, an AI opponent, graphics options, and more.</p>
+      <div class="modal-actions">
+        <button id="tutorial-close">Got it!</button>
+      </div>
+    </div>
+  </div>
+
 <script>
 (function () {
   const CELL = 20;
@@ -541,6 +570,7 @@
     easy:   { start: 220, floor: 150, step: 2 },
     normal: { start: 170, floor: 100, step: 3 },
     hard:   { start: 120, floor: 65,  step: 4 },
+    insane: { start: 90,  floor: 45,  step: 5 },
   };
   const FOOD_TYPES = {
     normal: { glyph: null, ring: null, points: 1 },
@@ -548,6 +578,7 @@
     speed:  { glyph: '⚡', ring: '#f97316', points: 1 },
     slow:   { glyph: '❄', ring: '#38bdf8', points: 1 },
     shrink: { glyph: '✂', ring: '#a855f7', points: 1 },
+    hammer: { glyph: '🔨', ring: '#a3a3a3', points: 1 },
   };
   const SKINS = {
     classic: { name: 'Classic', unlock: null },
@@ -567,6 +598,8 @@
     { id: 'combo-master',  name: 'Combo Master',     desc: 'Reach a x5 combo.',                   check: s => s.comboMax >= 5 },
     { id: 'hard-hero',     name: 'Hard Mode Hero',   desc: 'Score 10+ on Hard difficulty.',        check: s => s.hardBest >= 10 },
     { id: 'daily-devotee', name: 'Daily Devotee',    desc: 'Play the Daily Challenge 5 times.',   check: s => s.dailyPlays >= 5 },
+    { id: 'insane-survivor', name: 'Insane Survivor', desc: 'Score 5+ on Insane difficulty.',     check: s => s.insaneBest >= 5 },
+    { id: 'ai-slayer',     name: 'AI Slayer',        desc: 'Beat the AI opponent 3 times.',       check: s => s.aiWins >= 3 },
   ];
   const DEFAULT_KEYMAP = {
     p1: { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' },
@@ -591,6 +624,7 @@
 
   const scoreEl = document.getElementById('score');
   const score2Wrap = document.getElementById('score2-wrap');
+  const score2Label = document.getElementById('score2-label');
   const score2El = document.getElementById('score2');
   const bestEl = document.getElementById('best');
   const levelEl = document.getElementById('level');
@@ -630,7 +664,10 @@
   const optLayout = document.getElementById('opt-layout');
   const optVolume = document.getElementById('opt-volume');
   const optMusic = document.getElementById('opt-music');
+  const optVibration = document.getElementById('opt-vibration');
+  const optSoundTheme = document.getElementById('opt-soundtheme');
   const optTwoPlayer = document.getElementById('opt-twoplayer');
+  const optVsAI = document.getElementById('opt-vsai');
   const optSkin = document.getElementById('opt-skin');
   const optGhost = document.getElementById('opt-ghost');
   const optTheme = document.getElementById('opt-theme');
@@ -675,6 +712,7 @@
       skin: 'classic', ghost: false, layoutName: '',
       snakeStyle: 'smooth', particlesEnabled: true, shakeEnabled: true, glowEnabled: true, gridLinesEnabled: true,
       graphicsQuality: 'high',
+      vsAI: false, vibration: true, soundTheme: 'arcade',
     },
     safeParse(localStorage.getItem(SETTINGS_KEY))
   );
@@ -684,7 +722,8 @@
   // ---------- stats ----------
   let stats = Object.assign({
     gamesPlayed: 0, applesEaten: 0, longestSnake: 3, p1Wins: 0, p2Wins: 0, ties: 0,
-    goldenEaten: 0, speedEaten: 0, comboMax: 0, dailyPlays: 0, hardBest: 0, maxLevel: 1,
+    goldenEaten: 0, speedEaten: 0, comboMax: 0, dailyPlays: 0, hardBest: 0, insaneBest: 0, maxLevel: 1,
+    aiWins: 0, aiLosses: 0,
     unlocked: [],
   }, safeParse(localStorage.getItem(STATS_KEY)));
   if (!Array.isArray(stats.unlocked)) stats.unlocked = [];
@@ -703,13 +742,26 @@
     el._t = setTimeout(() => el.classList.remove('show'), 1400);
   }
 
+  let achvToastQueue = [];
+  let achvToastBusy = false;
+  function queueAchvToast(text) {
+    achvToastQueue.push(text);
+    if (!achvToastBusy) drainAchvToastQueue();
+  }
+  function drainAchvToastQueue() {
+    if (achvToastQueue.length === 0) { achvToastBusy = false; return; }
+    achvToastBusy = true;
+    showToast(achvToast, achvToastQueue.shift());
+    setTimeout(drainAchvToastQueue, 1650);
+  }
+
   function checkAchievements() {
     let unlockedNew = false;
     ACHIEVEMENTS.forEach(a => {
       if (!stats.unlocked.includes(a.id) && a.check(stats)) {
         stats.unlocked.push(a.id);
         unlockedNew = true;
-        showToast(achvToast, `🏆 ${a.name}!`);
+        queueAchvToast(`🏆 ${a.name}!`);
       }
     });
     if (unlockedNew) { saveStats(); populateSkinSelect(); }
@@ -794,12 +846,13 @@
     zenHint.classList.toggle('hidden', settings.mode !== 'zen');
     dailyHint.classList.toggle('hidden', settings.mode !== 'daily');
     optTwoPlayer.disabled = settings.mode !== 'classic';
+    optVsAI.disabled = settings.mode !== 'classic';
     optLayout.disabled = settings.mode !== 'classic';
     optWrap.disabled = settings.mode === 'zen' || settings.mode === 'daily';
     optWrap.checked = settings.mode === 'zen' ? true : (settings.mode === 'daily' ? false : settings.wrap);
     optGrid.disabled = settings.mode === 'daily';
     optDifficulty.disabled = settings.mode === 'daily';
-    optGhost.disabled = settings.twoPlayer;
+    optGhost.disabled = settings.twoPlayer && !settings.vsAI;
   }
 
   function populateSettingsUI() {
@@ -809,7 +862,10 @@
     optDifficulty.value = settings.difficulty;
     optVolume.value = Math.round(settings.volume * 100);
     optMusic.checked = settings.music;
+    optVibration.checked = settings.vibration;
+    optSoundTheme.value = settings.soundTheme;
     optTwoPlayer.checked = settings.twoPlayer;
+    optVsAI.checked = settings.vsAI;
     optGhost.checked = settings.ghost;
     optTheme.value = settings.theme;
     optColorblind.checked = settings.colorblind;
@@ -837,7 +893,7 @@
     const t0 = audioCtx.currentTime + delay;
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-    osc.type = type;
+    osc.type = settings.soundTheme === 'chiptune' ? 'square' : type;
     osc.frequency.setValueAtTime(freq, t0);
     if (endFreq) osc.frequency.exponentialRampToValueAtTime(endFreq, t0 + duration);
     const v = Math.max(0.0001, volume * settings.volume);
@@ -955,8 +1011,16 @@
   let timeRemaining = 0, timeInterval = null;
   let runTrail = [], ghostTrail = null, ghostIndex = 0;
   let pendingScoreKey = null;
+  let boosting = false, boostTicks = 0;
+  let attractMode = false, idleTimer = null;
+
+  function vibrate(ms) {
+    if (settings.vibration && navigator.vibrate) { try { navigator.vibrate(ms); } catch { /* unsupported */ } }
+  }
 
   function currentDifficulty() { return DIFFICULTY[effectiveDifficultyKey()] || DIFFICULTY.normal; }
+  function hasSecondSnake() { return (settings.twoPlayer || settings.vsAI) && settings.mode === 'classic'; }
+  function isHumanTwoPlayer() { return settings.twoPlayer && !settings.vsAI && settings.mode === 'classic'; }
 
   function loadCustomLayout() {
     if (settings.mode !== 'classic' || !settings.layoutName) return null;
@@ -970,7 +1034,7 @@
     clearInterval(timeInterval);
     rand = settings.mode === 'daily' ? mulberry32(dailySeed()) : Math.random;
     const midY = Math.floor(rows / 2);
-    if (settings.twoPlayer && settings.mode === 'classic') {
+    if (hasSecondSnake()) {
       const x1 = Math.max(2, Math.floor(cols * 0.25));
       const x2 = Math.min(cols - 3, Math.floor(cols * 0.75));
       const y1 = Math.max(1, midY - 2);
@@ -1004,14 +1068,15 @@
     speedMs = currentDifficulty().start;
     runTrail = [{ ...snake[0] }];
     ghostIndex = 0;
-    ghostTrail = (settings.ghost && !settings.twoPlayer)
+    ghostTrail = (settings.ghost && !isHumanTwoPlayer())
       ? safeParse(localStorage.getItem(GHOST_KEY_PREFIX + settings.mode))
       : null;
     if (!ghostTrail || !Array.isArray(ghostTrail.trail)) ghostTrail = null;
     scoreEl.textContent = score;
     score2El.textContent = score2;
     levelEl.textContent = level;
-    score2Wrap.classList.toggle('hidden', !(settings.twoPlayer && settings.mode === 'classic'));
+    score2Wrap.classList.toggle('hidden', !(hasSecondSnake()));
+    score2Label.textContent = settings.vsAI ? 'AI' : 'P2';
     timeWrap.classList.toggle('hidden', settings.mode !== 'time');
     timeRemaining = 60;
     timeEl.textContent = timeRemaining;
@@ -1038,10 +1103,11 @@
 
   function pickFoodType() {
     const r = rand();
-    if (r < 0.06) return 'golden';
-    if (r < 0.12) return 'speed';
-    if (r < 0.18) return 'slow';
-    if (r < 0.24) return 'shrink';
+    if (r < 0.05) return 'golden';
+    if (r < 0.10) return 'speed';
+    if (r < 0.15) return 'slow';
+    if (r < 0.20) return 'shrink';
+    if (r < 0.25 && obstacles.length > 0) return 'hammer';
     return 'normal';
   }
 
@@ -1059,11 +1125,19 @@
       (occ.some(s => s.x === pos.x && s.y === pos.y) ||
         heads.some(h => Math.abs(h.x - pos.x) + Math.abs(h.y - pos.y) < 3))
     );
-    if (tries < 200) obstacles.push(pos);
+    if (tries >= 200) return;
+    if (level >= 3 && rand() < 0.35) {
+      const dirs = [{ x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }];
+      const d = dirs[Math.floor(rand() * dirs.length)];
+      pos.moving = true;
+      pos.vx = d.x;
+      pos.vy = d.y;
+    }
+    obstacles.push(pos);
   }
 
   function maybeLevelUp() {
-    const leading = (settings.twoPlayer && settings.mode === 'classic') ? Math.max(score, score2) : score;
+    const leading = (hasSecondSnake()) ? Math.max(score, score2) : score;
     const newLevel = Math.floor(leading / 5) + 1;
     if (newLevel > level) {
       level = newLevel;
@@ -1071,9 +1145,11 @@
       addObstacle();
       showToast(levelToast, `Level ${level}!`);
       sfx.levelUp();
-      stats.maxLevel = Math.max(stats.maxLevel, level);
-      saveStats();
-      checkAchievements();
+      if (!attractMode) {
+        stats.maxLevel = Math.max(stats.maxLevel, level);
+        saveStats();
+        checkAchievements();
+      }
     }
   }
 
@@ -1144,7 +1220,14 @@
     let s = speedMs;
     if (frenzy) s *= 0.55;
     if (slomo) s *= 1.6;
-    return Math.max(40, s);
+    if (boosting) s *= 0.5;
+    return Math.max(30, s);
+  }
+  function setBoosting(on) {
+    if (boosting === on) return;
+    boosting = on;
+    if (!boosting) boostTicks = 0;
+    if (gameState === 'playing') restartTimer();
   }
   function checkEffectTimers() {
     const { frenzy, slomo } = effectsActive();
@@ -1189,7 +1272,7 @@
     obstacles.forEach(o => {
       const x = o.x * CELL + 2, y = o.y * CELL + 2, w = CELL - 4, h = CELL - 4;
       const g = ctx.createLinearGradient(x, y, x + w, y + h);
-      g.addColorStop(0, getCss('--obstacle'));
+      g.addColorStop(0, o.moving ? getCss('--accent') : getCss('--obstacle'));
       g.addColorStop(1, getCss('--obstacle-dark'));
       ctx.fillStyle = g;
       roundRectPath(x, y, w, h, 4);
@@ -1361,10 +1444,10 @@
     if (settings.gridLinesEnabled) drawGrid();
     drawObstacles();
     drawFood();
-    if (settings.ghost && !settings.twoPlayer) drawGhost();
+    if (settings.ghost && !isHumanTwoPlayer()) drawGhost();
 
     renderSnake(snake, prevSnake, dir, dirQueue1[0] || dir, getP1Colors(), alpha);
-    if (settings.twoPlayer && settings.mode === 'classic') {
+    if (hasSecondSnake()) {
       const p2Colors = { head: getCss('--p2-head'), light: getCss('--p2-light'), dark: getCss('--p2-dark') };
       renderSnake(snake2, prevSnake2, dir2, dirQueue2[0] || dir2, p2Colors, alpha);
     }
@@ -1390,11 +1473,46 @@
     return false;
   }
 
+  const AI_MOVES = [{ x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }];
+  function computeAIMove(bodyArr, curDir, otherBodyArr) {
+    let best = null, bestScore = -Infinity;
+    AI_MOVES.forEach(d => {
+      if (d.x === -curDir.x && d.y === -curDir.y) return; // never reverse
+      const nh = { x: bodyArr[0].x + d.x, y: bodyArr[0].y + d.y };
+      wrapPosition(nh);
+      let score;
+      if (checkDeath(bodyArr, nh) || otherBodyArr.some(s => sameCell(s, nh))) {
+        score = -1000;
+      } else {
+        score = food ? -(Math.abs(nh.x - food.x) + Math.abs(nh.y - food.y)) : 0;
+      }
+      if (score > bestScore) { bestScore = score; best = d; }
+    });
+    return best || curDir;
+  }
+
+  function updateObstacles() {
+    obstacles.forEach(o => {
+      if (!o.moving) return;
+      let nx = o.x + o.vx, ny = o.y + o.vy;
+      if (effectiveWrap()) {
+        nx = (nx + cols) % cols;
+        ny = (ny + rows) % rows;
+      } else if (nx < 0 || nx >= cols || ny < 0 || ny >= rows) {
+        o.vx *= -1; o.vy *= -1;
+        nx = o.x + o.vx; ny = o.y + o.vy;
+      }
+      const blocked = obstacles.some(other => other !== o && other.x === nx && other.y === ny);
+      if (!blocked) { o.x = nx; o.y = ny; }
+      else { o.vx *= -1; o.vy *= -1; }
+    });
+  }
+
   function addScore(player, amount) {
     if (player === 1) {
       score += amount;
       scoreEl.textContent = score;
-      if (score > best) { best = score; bestEl.textContent = best; localStorage.setItem(BEST_KEY, best); }
+      if (!attractMode && score > best) { best = score; bestEl.textContent = best; localStorage.setItem(BEST_KEY, best); }
     } else {
       score2 += amount;
       score2El.textContent = score2;
@@ -1417,21 +1535,27 @@
     const c = combo[player];
     c.count = (now - c.last < COMBO_WINDOW) ? c.count + 1 : 1;
     c.last = now;
-    if (c.count > stats.comboMax) { stats.comboMax = c.count; saveStats(); checkAchievements(); }
     const comboMultiplier = Math.min(5, c.count);
 
     addScore(player, info.points * frenzyMultiplier * comboMultiplier);
     spawnParticles(food.x, food.y, info.ring || getCss('--food'));
     sfx.eat(type);
+    vibrate(20);
 
-    stats.applesEaten++;
-    if (type === 'golden') stats.goldenEaten++;
-    if (type === 'speed') stats.speedEaten++;
-    saveStats();
-    checkAchievements();
+    if (!attractMode) {
+      if (c.count > stats.comboMax) stats.comboMax = c.count;
+      stats.applesEaten++;
+      if (type === 'golden') stats.goldenEaten++;
+      if (type === 'speed') stats.speedEaten++;
+      saveStats();
+      checkAchievements();
+    }
 
     if (type === 'speed') frenzyUntil = now + 5000;
     if (type === 'slow') slomoUntil = now + 5000;
+    if (type === 'hammer' && obstacles.length > 0) {
+      obstacles.splice(Math.floor(rand() * obstacles.length), 1);
+    }
     let extraShrink = 0;
     if (type === 'shrink') {
       const arr = player === 1 ? snake : snake2;
@@ -1444,15 +1568,19 @@
   function step() {
     if (gameState !== 'playing') return;
 
+    updateObstacles();
+
+    if (attractMode) dirQueue1 = [computeAIMove(snake, dir, snake2)];
     if (dirQueue1.length) dir = dirQueue1.shift();
     const head1 = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
     wrapPosition(head1);
     let dead1 = checkDeath(snake, head1);
 
     let head2 = null, dead2 = false;
-    const twoP = settings.twoPlayer && settings.mode === 'classic';
+    const twoP = hasSecondSnake();
     if (twoP) {
-      if (dirQueue2.length) dir2 = dirQueue2.shift();
+      if (settings.vsAI) dir2 = computeAIMove(snake2, dir2, snake);
+      else if (dirQueue2.length) dir2 = dirQueue2.shift();
       head2 = { x: snake2[0].x + dir2.x, y: snake2[0].y + dir2.y };
       wrapPosition(head2);
       dead2 = checkDeath(snake2, head2);
@@ -1461,14 +1589,23 @@
       if (!dead2 && snake.some(s => sameCell(s, head2))) dead2 = true;
     }
 
-    if (dead1 || dead2) { gameOver(dead1, dead2, 'collision'); return; }
+    if (dead1 || dead2) {
+      if (attractMode) { reset(); return; }
+      gameOver(dead1, dead2, 'collision');
+      return;
+    }
 
     prevSnake = snake.map(s => ({ ...s }));
     snake.unshift(head1);
     const ate1 = eatIfPossible(head1, 1);
     if (!ate1.grow) snake.pop();
     for (let i = 0; i < ate1.extraShrink; i++) if (snake.length > 3) snake.pop();
-    stats.longestSnake = Math.max(stats.longestSnake, snake.length);
+    if (!attractMode) stats.longestSnake = Math.max(stats.longestSnake, snake.length);
+
+    if (boosting && snake.length > 3) {
+      boostTicks++;
+      if (boostTicks % 4 === 0) snake.pop();
+    }
 
     if (!twoP) {
       runTrail.push({ ...head1 });
@@ -1517,7 +1654,7 @@
   function showReadyUI() {
     overlayTitle.textContent = 'Ready?';
     const modeHint = {
-      classic: settings.twoPlayer ? 'P1: Arrow keys · P2: WASD' : 'Use arrow keys or WASD to move',
+      classic: settings.vsAI ? 'You vs the AI — arrow keys or WASD to move' : (settings.twoPlayer ? 'P1: Arrow keys · P2: WASD' : 'Use arrow keys or WASD to move'),
       zen: 'Relax — no walls, no death. Press ⏹ to stop.',
       time: '60 seconds. Score as much as you can!',
       daily: "Today's board — same for every attempt today.",
@@ -1528,6 +1665,32 @@
     copyScoreBtn.classList.add('hidden');
     startBtn.textContent = 'Start Game';
     overlay.classList.remove('hidden');
+    scheduleAttract();
+  }
+
+  function scheduleAttract() {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+      if (gameState === 'ready') startAttractMode();
+    }, 15000);
+  }
+  function startAttractMode() {
+    attractMode = true;
+    reset();
+    gameState = 'playing';
+    overlay.classList.remove('hidden');
+    overlayTitle.textContent = 'Demo';
+    overlayMsg.textContent = 'Press any key or tap to play';
+    overlayActions.classList.add('hidden');
+    highscoreEntry.classList.add('hidden');
+    restartTimer();
+  }
+  function stopAttractMode() {
+    if (!attractMode) return;
+    attractMode = false;
+    clearInterval(timer);
+    gameState = 'ready';
+    showReadyUI();
   }
 
   function showPausedUI() {
@@ -1595,7 +1758,7 @@
   }
 
   function maybeSaveGhost() {
-    if (settings.twoPlayer && settings.mode === 'classic') return;
+    if (isHumanTwoPlayer()) return;
     const key = GHOST_KEY_PREFIX + settings.mode;
     const existing = safeParse(localStorage.getItem(key));
     if (!existing || !existing.score || score >= existing.score) {
@@ -1610,23 +1773,28 @@
     zenStopBtn.classList.add('hidden');
     shakeUntil = performance.now() + 400;
     sfx.gameOver();
+    if (!attractMode) vibrate([50, 30, 50]);
 
     overlayActions.classList.remove('hidden');
     startBtn.textContent = 'Play Again';
     copyScoreBtn.classList.remove('hidden');
 
-    const twoP = settings.twoPlayer && settings.mode === 'classic';
-    if (twoP) {
+    const twoP = hasSecondSnake();
+    if (twoP && !attractMode) {
       let title;
-      if (dead1 && dead2) { title = "It's a Tie!"; stats.ties++; }
+      if (settings.vsAI) {
+        if (dead1 && dead2) { title = "It's a Tie!"; stats.ties++; }
+        else if (dead1) { title = 'AI Wins!'; stats.aiWins++; }
+        else { title = 'You Win!'; stats.aiLosses++; }
+      } else if (dead1 && dead2) { title = "It's a Tie!"; stats.ties++; }
       else if (dead1) { title = 'Player 2 Wins!'; stats.p2Wins++; }
       else { title = 'Player 1 Wins!'; stats.p1Wins++; }
       saveStats();
       checkAchievements();
       overlayTitle.textContent = title;
-      overlayMsg.textContent = `P1: ${score} · P2: ${score2}`;
+      overlayMsg.textContent = settings.vsAI ? `You: ${score} · AI: ${score2}` : `P1: ${score} · P2: ${score2}`;
       highscoreEntry.classList.add('hidden');
-      copyScoreBtn.dataset.text = `${title} P1: ${score} · P2: ${score2} in Snake! 🐍`;
+      copyScoreBtn.dataset.text = `${title} ${settings.vsAI ? `You: ${score} · AI: ${score2}` : `P1: ${score} · P2: ${score2}`} in Snake! 🐍`;
     } else {
       if (settings.mode === 'zen') overlayTitle.textContent = 'Run Complete!';
       else if (reason === 'time') overlayTitle.textContent = "Time's Up!";
@@ -1634,10 +1802,9 @@
       overlayMsg.textContent = `Score: ${score} — Best: ${best}`;
       copyScoreBtn.dataset.text = `I scored ${score} points in Snake (${settings.mode}) 🐍🍎`;
 
-      if (!settings.twoPlayer && settings.difficulty === 'hard' && settings.mode === 'classic') {
-        stats.hardBest = Math.max(stats.hardBest, score);
-        saveStats();
-        checkAchievements();
+      if (!isHumanTwoPlayer() && settings.mode === 'classic') {
+        if (settings.difficulty === 'hard') { stats.hardBest = Math.max(stats.hardBest, score); saveStats(); checkAchievements(); }
+        if (settings.difficulty === 'insane') { stats.insaneBest = Math.max(stats.insaneBest, score); saveStats(); checkAchievements(); }
       }
 
       maybeSaveGhost();
@@ -1749,11 +1916,24 @@
   });
   optTwoPlayer.addEventListener('change', e => {
     settings.twoPlayer = e.target.checked;
+    if (settings.twoPlayer) { settings.vsAI = false; optVsAI.checked = false; }
     saveSettings();
-    score2Wrap.classList.toggle('hidden', !(settings.twoPlayer && settings.mode === 'classic'));
+    score2Wrap.classList.toggle('hidden', !(hasSecondSnake()));
+    score2Label.textContent = settings.vsAI ? 'AI' : 'P2';
     updateModeDependentUI();
     refreshReadyIfIdle();
   });
+  optVsAI.addEventListener('change', e => {
+    settings.vsAI = e.target.checked;
+    if (settings.vsAI) { settings.twoPlayer = false; optTwoPlayer.checked = false; }
+    saveSettings();
+    score2Wrap.classList.toggle('hidden', !(hasSecondSnake()));
+    score2Label.textContent = settings.vsAI ? 'AI' : 'P2';
+    updateModeDependentUI();
+    refreshReadyIfIdle();
+  });
+  optVibration.addEventListener('change', e => { settings.vibration = e.target.checked; saveSettings(); });
+  optSoundTheme.addEventListener('change', e => { settings.soundTheme = e.target.value; saveSettings(); });
   optSkin.addEventListener('change', e => { settings.skin = e.target.value; saveSettings(); });
   optGhost.addEventListener('change', e => { settings.ghost = e.target.checked; saveSettings(); });
   optTheme.addEventListener('change', e => { settings.theme = e.target.value; saveSettings(); applyTheme(); });
@@ -1808,9 +1988,12 @@
       ['Golden apples eaten', stats.goldenEaten],
       ['Best combo', `x${stats.comboMax}`],
       ['Best score (Hard)', stats.hardBest],
+      ['Best score (Insane)', stats.insaneBest],
       ['P1 wins', stats.p1Wins],
       ['P2 wins', stats.p2Wins],
       ['Ties', stats.ties],
+      ['Wins vs AI', stats.aiWins],
+      ['Losses vs AI', stats.aiLosses],
       ['Daily challenges played', stats.dailyPlays],
     ];
     statsGrid.innerHTML = rows.map(([label, val]) => `<div>${escapeHtml(label)}</div><span>${escapeHtml(String(val))}</span>`).join('');
@@ -1821,6 +2004,52 @@
   openGraphicsBtn.addEventListener('click', () => { populateGraphicsUI(); graphicsModal.classList.remove('hidden'); });
   graphicsClose.addEventListener('click', () => graphicsModal.classList.add('hidden'));
   optQuality.addEventListener('change', e => applyQualityPreset(e.target.value));
+
+  const TUTORIAL_SEEN_KEY = 'snake-tutorial-seen';
+  const tutorialModal = document.getElementById('tutorial-modal');
+  document.getElementById('tutorial-close').addEventListener('click', () => {
+    tutorialModal.classList.add('hidden');
+    localStorage.setItem(TUTORIAL_SEEN_KEY, '1');
+  });
+  document.getElementById('help-btn').addEventListener('click', () => tutorialModal.classList.remove('hidden'));
+
+  document.getElementById('export-save-btn').addEventListener('click', () => {
+    const data = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('snake-')) data[k] = localStorage.getItem(k);
+    }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'snake-save-data.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+  const importSaveInput = document.getElementById('import-save-input');
+  document.getElementById('import-save-btn').addEventListener('click', () => importSaveInput.click());
+  importSaveInput.addEventListener('change', () => {
+    const file = importSaveInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        Object.keys(data).forEach(k => {
+          if (k.startsWith('snake-')) localStorage.setItem(k, data[k]);
+        });
+        alert('Save data imported! The page will now reload.');
+        location.reload();
+      } catch {
+        alert('That file could not be read as valid Snake save data.');
+      }
+    };
+    reader.readAsText(file);
+    importSaveInput.value = '';
+  });
   optSnakeStyle.addEventListener('change', e => { settings.snakeStyle = e.target.value; saveSettings(); });
   optParticles.addEventListener('change', e => { settings.particlesEnabled = e.target.checked; saveSettings(); });
   optShake.addEventListener('change', e => { settings.shakeEnabled = e.target.checked; saveSettings(); });
@@ -1892,6 +2121,8 @@
   }
 
   document.addEventListener('keydown', (e) => {
+    scheduleAttract();
+    if (attractMode) { stopAttractMode(); return; }
     if (awaitingRebind) {
       e.preventDefault();
       settings.keymap[awaitingRebind.player][awaitingRebind.action] = e.key;
@@ -1900,22 +2131,30 @@
       awaitingRebind = null;
       return;
     }
+    if (e.key === 'Shift') { setBoosting(true); return; }
     if (e.key === ' ') {
       if (gameState === 'playing') setState('paused');
       else if (gameState === 'paused') { lastStepTime = performance.now(); setState('playing'); }
       e.preventDefault();
       return;
     }
-    const twoP = settings.twoPlayer && settings.mode === 'classic';
+    const twoP = hasSecondSnake();
     const d1 = dirForKey(settings.keymap.p1, e.key);
     if (d1) { trySetDir(1, d1); e.preventDefault(); return; }
-    if (twoP) {
+    if (twoP && !settings.vsAI) {
       const d2 = dirForKey(settings.keymap.p2, e.key);
       if (d2) { trySetDir(2, d2); e.preventDefault(); return; }
     } else {
       const dAlt = dirForKey(settings.keymap.p2, e.key);
       if (dAlt) { trySetDir(1, dAlt); e.preventDefault(); }
     }
+  });
+  document.addEventListener('keyup', (e) => {
+    if (e.key === 'Shift') setBoosting(false);
+  });
+  document.addEventListener('pointerdown', () => {
+    scheduleAttract();
+    if (attractMode) stopAttractMode();
   });
 
   document.querySelectorAll('#touch-controls button').forEach(btn => {
@@ -1924,6 +2163,16 @@
       trySetDir(1, map[btn.dataset.dir]);
     });
   });
+  const boostBtn = document.getElementById('boost-btn');
+  if (boostBtn) {
+    const startBoost = (e) => { e.preventDefault(); setBoosting(true); };
+    const endBoost = () => setBoosting(false);
+    boostBtn.addEventListener('touchstart', startBoost);
+    boostBtn.addEventListener('touchend', endBoost);
+    boostBtn.addEventListener('mousedown', startBoost);
+    boostBtn.addEventListener('mouseup', endBoost);
+    boostBtn.addEventListener('mouseleave', endBoost);
+  }
 
   let touchStart = null;
   canvas.addEventListener('touchstart', (e) => {
@@ -1949,6 +2198,7 @@
   reset();
   draw(1);
   showReadyUI();
+  if (!localStorage.getItem(TUTORIAL_SEEN_KEY)) tutorialModal.classList.remove('hidden');
   requestAnimationFrame(renderLoop);
 })();
 </script>
