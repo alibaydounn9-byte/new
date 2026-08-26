@@ -1770,34 +1770,108 @@
     }
 
     const classic = settings.snakeStyle === 'classic';
-    for (let i = n - 1; i >= 0; i--) {
+    const fancy = !classic && !colors.textured && !colors.rainbow;
+    const wavy = !classic && !settings.reducedMotion;
+    const t0 = performance.now() / 130;
+
+    // pixel centers, with a perpendicular slither wave along the body for a lifelike feel
+    const centers = new Array(n);
+    for (let i = 0; i < n; i++) {
       const p = points[i];
-      const t = n <= 1 ? 0 : i / (n - 1);
-      const size = classic ? CELL - 2 : CELL - 2 - t * 4;
-      const cx = p.x * CELL + CELL / 2;
-      const cy = p.y * CELL + CELL / 2;
-      ctx.fillStyle = colors.rainbow
-        ? `hsl(${Math.round((i * 18 + performance.now() / 15) % 360)}, 80%, ${i === 0 ? 55 : 60}%)`
-        : colors.textured
-        ? (i === 0 ? colors.head : (scalesPattern || colors.head))
-        : (i === 0 ? colors.head : (classic ? colors.dark : mixColor(colors.light, colors.dark, t)));
-      roundRectPath(cx - size / 2, cy - size / 2, size, size, classic ? 1 : size / 3);
-      ctx.fill();
+      let cx = p.x * CELL + CELL / 2;
+      let cy = p.y * CELL + CELL / 2;
+      if (wavy && i > 0) {
+        const ref = points[i - 1];
+        let dirx = ref.x - p.x, diry = ref.y - p.y;
+        const len = Math.hypot(dirx, diry) || 1;
+        dirx /= len; diry /= len;
+        const perpx = -diry, perpy = dirx;
+        const amp = Math.min(2.2, 0.3 + i * 0.25) * (1 - i / n);
+        const wave = Math.sin(t0 - i * 0.75) * amp;
+        cx += perpx * wave;
+        cy += perpy * wave;
+      }
+      centers[i] = { x: cx, y: cy };
     }
 
-    const headP = points[0];
-    const hx = headP.x * CELL + CELL / 2;
-    const hy = headP.y * CELL + CELL / 2;
+    for (let i = n - 1; i >= (fancy ? 1 : 0); i--) {
+      const t = n <= 1 ? 0 : i / (n - 1);
+      const size = classic ? CELL - 2 : CELL - 2 - t * 4;
+      const { x: cx, y: cy } = centers[i];
+      if (fancy) {
+        const segColor = mixColor(colors.light, colors.dark, t);
+        const grad = ctx.createRadialGradient(cx - size * 0.25, cy - size * 0.3, 1, cx, cy, size * 0.72);
+        grad.addColorStop(0, colors.light);
+        grad.addColorStop(0.6, segColor);
+        grad.addColorStop(1, colors.dark);
+        ctx.fillStyle = grad;
+        roundRectPath(cx - size / 2, cy - size / 2, size, size, size / 3);
+        ctx.fill();
+        if (i % 2 === 0) {
+          ctx.fillStyle = 'rgba(0,0,0,0.1)';
+          roundRectPath(cx - size / 2, cy + size * 0.15, size, size * 0.28, size / 5);
+          ctx.fill();
+        }
+      } else {
+        ctx.fillStyle = colors.rainbow
+          ? `hsl(${Math.round((i * 18 + performance.now() / 15) % 360)}, 80%, ${i === 0 ? 55 : 60}%)`
+          : colors.textured
+          ? (i === 0 ? colors.head : (scalesPattern || colors.head))
+          : (i === 0 ? colors.head : (classic ? colors.dark : mixColor(colors.light, colors.dark, t)));
+        roundRectPath(cx - size / 2, cy - size / 2, size, size, classic ? 1 : size / 3);
+        ctx.fill();
+      }
+    }
+
+    const headP = centers[0];
+    const hx = headP.x;
+    const hy = headP.y;
     const d = gameState === 'playing' ? nxtDir : curDir;
     const ex = d.x, ey = d.y;
     const perpX = -ey, perpY = ex;
+    const headAngle = Math.atan2(ey, ex);
+
+    if (fancy) {
+      const headColor = colors.rainbow ? `hsl(${Math.round(performance.now() / 15 % 360)}, 80%, 55%)` : colors.head;
+      ctx.save();
+      ctx.translate(hx, hy);
+      ctx.rotate(headAngle);
+      ctx.fillStyle = headColor;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, CELL / 2 - 0.5, CELL / 2 - 1.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      const gloss = ctx.createRadialGradient(-CELL * 0.15, -CELL * 0.22, 0.5, -CELL * 0.05, -CELL * 0.1, CELL * 0.5);
+      gloss.addColorStop(0, 'rgba(255,255,255,0.45)');
+      gloss.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = gloss;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, CELL / 2 - 0.5, CELL / 2 - 1.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else if (colors.textured || colors.rainbow) {
+      const size = CELL - 2;
+      ctx.fillStyle = colors.rainbow ? `hsl(${Math.round(performance.now() / 15 % 360)}, 80%, 55%)` : colors.head;
+      roundRectPath(hx - size / 2, hy - size / 2, size, size, classic ? 1 : size / 3);
+      ctx.fill();
+    }
+
     [-1, 1].forEach(side => {
       const eyeX = hx + ex * 3 + perpX * 4.5 * side;
       const eyeY = hy + ey * 3 + perpY * 4.5 * side;
-      ctx.fillStyle = '#0f172a';
-      ctx.beginPath(); ctx.arc(eyeX, eyeY, 2.1, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#fff';
-      ctx.beginPath(); ctx.arc(eyeX - ex * 0.6, eyeY - ey * 0.6, 0.8, 0, Math.PI * 2); ctx.fill();
+      const eyeR = fancy ? 2.3 : 2.1;
+      if (fancy) {
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(eyeX, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath(); ctx.arc(eyeX + ex * 0.9, eyeY + ey * 0.9, eyeR * 0.6, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.beginPath(); ctx.arc(eyeX - ex * 0.4 + perpX * 0.5 * side, eyeY - ey * 0.4 + perpY * 0.5 * side, 0.7, 0, Math.PI * 2); ctx.fill();
+      } else {
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath(); ctx.arc(eyeX, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(eyeX - ex * 0.6, eyeY - ey * 0.6, 0.8, 0, Math.PI * 2); ctx.fill();
+      }
     });
 
     if (gameState === 'playing' && !settings.reducedMotion) {
