@@ -130,6 +130,9 @@
     box-shadow: 0 0 30px rgba(56, 189, 248, 0.15);
     display: block;
   }
+  canvas.no-glow {
+    box-shadow: none;
+  }
   #level-toast, #achv-toast {
     position: absolute;
     top: 10px;
@@ -440,6 +443,7 @@
         <button class="secondary tiny" id="open-achv-btn">Achievements</button>
         <button class="secondary tiny" id="open-stats-btn">Stats</button>
         <button class="secondary tiny" id="open-editor-btn">Level Editor</button>
+        <button class="secondary tiny" id="open-graphics-btn">Graphics</button>
       </div>
       <p class="modal-hint">Grid size, difficulty, wrap, layout and mode apply on your next game.</p>
       <div class="modal-actions">
@@ -496,6 +500,26 @@
       <div class="stats-grid" id="stats-grid"></div>
       <div class="modal-actions">
         <button id="stats-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="graphics-modal" class="modal hidden">
+    <div class="modal-card">
+      <h2>Graphics</h2>
+      <label>Snake style
+        <select id="opt-snakestyle">
+          <option value="smooth">Smooth (gradient, tapered)</option>
+          <option value="classic">Classic (flat, blocky)</option>
+        </select>
+      </label>
+      <label class="row"><input type="checkbox" id="opt-particles"> Particle effects</label>
+      <label class="row"><input type="checkbox" id="opt-shake"> Screen shake</label>
+      <label class="row"><input type="checkbox" id="opt-glow"> Glow effects</label>
+      <label class="row"><input type="checkbox" id="opt-gridlines"> Show grid lines</label>
+      <p class="modal-hint">These apply immediately, even mid-game.</p>
+      <div class="modal-actions">
+        <button id="graphics-close">Done</button>
       </div>
     </div>
   </div>
@@ -608,6 +632,7 @@
   const openAchvBtn = document.getElementById('open-achv-btn');
   const openStatsBtn = document.getElementById('open-stats-btn');
   const openEditorBtn = document.getElementById('open-editor-btn');
+  const openGraphicsBtn = document.getElementById('open-graphics-btn');
   const controlsModal = document.getElementById('controls-modal');
   const controlsClose = document.getElementById('controls-close');
   const controlsReset = document.getElementById('controls-reset');
@@ -617,6 +642,13 @@
   const statsModal = document.getElementById('stats-modal');
   const statsClose = document.getElementById('stats-close');
   const statsGrid = document.getElementById('stats-grid');
+  const graphicsModal = document.getElementById('graphics-modal');
+  const graphicsClose = document.getElementById('graphics-close');
+  const optSnakeStyle = document.getElementById('opt-snakestyle');
+  const optParticles = document.getElementById('opt-particles');
+  const optShake = document.getElementById('opt-shake');
+  const optGlow = document.getElementById('opt-glow');
+  const optGridLines = document.getElementById('opt-gridlines');
 
   const editorBar = document.getElementById('editor-bar');
   const layoutNameInput = document.getElementById('layout-name-input');
@@ -631,6 +663,7 @@
       mode: 'classic', music: false, colorblind: false,
       reducedMotion: window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
       skin: 'classic', ghost: false, layoutName: '',
+      snakeStyle: 'smooth', particlesEnabled: true, shakeEnabled: true, glowEnabled: true, gridLinesEnabled: true,
     },
     safeParse(localStorage.getItem(SETTINGS_KEY))
   );
@@ -685,6 +718,18 @@
       root.style.removeProperty('--food');
       root.style.removeProperty('--food-glow');
     }
+  }
+
+  function applyGlow() {
+    canvas.classList.toggle('no-glow', !settings.glowEnabled);
+  }
+
+  function populateGraphicsUI() {
+    optSnakeStyle.value = settings.snakeStyle;
+    optParticles.checked = settings.particlesEnabled;
+    optShake.checked = settings.shakeEnabled;
+    optGlow.checked = settings.glowEnabled;
+    optGridLines.checked = settings.gridLinesEnabled;
   }
 
   function populateSkinSelect() {
@@ -1032,7 +1077,7 @@
 
   // ---------- particles ----------
   function spawnParticles(cellX, cellY, color) {
-    if (settings.reducedMotion) return;
+    if (settings.reducedMotion || !settings.particlesEnabled) return;
     const cx = cellX * CELL + CELL / 2, cy = cellY * CELL + CELL / 2;
     for (let i = 0; i < 14; i++) {
       const angle = Math.random() * Math.PI * 2;
@@ -1090,7 +1135,7 @@
 
   // ---------- screen shake ----------
   function getShakeOffset() {
-    if (settings.reducedMotion) return { x: 0, y: 0 };
+    if (settings.reducedMotion || !settings.shakeEnabled) return { x: 0, y: 0 };
     const now = performance.now();
     if (now >= shakeUntil) return { x: 0, y: 0 };
     const remaining = shakeUntil - now;
@@ -1135,14 +1180,16 @@
     const fy = food.y * CELL + CELL / 2 + bob;
     const appleR = CELL / 2 - 3;
 
-    const glowColor = isGolden ? '#fde68a' : getCss('--food-glow');
-    const glow = ctx.createRadialGradient(fx, fy, 1, fx, fy, appleR + 7);
-    glow.addColorStop(0, glowColor);
-    glow.addColorStop(1, 'rgba(248,113,113,0)');
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.arc(fx, fy, appleR + 7, 0, Math.PI * 2);
-    ctx.fill();
+    if (settings.glowEnabled) {
+      const glowColor = isGolden ? '#fde68a' : getCss('--food-glow');
+      const glow = ctx.createRadialGradient(fx, fy, 1, fx, fy, appleR + 7);
+      glow.addColorStop(0, glowColor);
+      glow.addColorStop(1, 'rgba(248,113,113,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(fx, fy, appleR + 7, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     const c0 = isGolden ? '#fff7cc' : '#fecaca';
     const c1 = isGolden ? '#fbbf24' : getCss('--food');
@@ -1227,16 +1274,17 @@
         : { x: lerp(prev.x, cur.x, alpha), y: lerp(prev.y, cur.y, alpha) };
     }
 
+    const classic = settings.snakeStyle === 'classic';
     for (let i = n - 1; i >= 0; i--) {
       const p = points[i];
       const t = n <= 1 ? 0 : i / (n - 1);
-      const size = CELL - 2 - t * 4;
+      const size = classic ? CELL - 2 : CELL - 2 - t * 4;
       const cx = p.x * CELL + CELL / 2;
       const cy = p.y * CELL + CELL / 2;
       ctx.fillStyle = colors.rainbow
         ? `hsl(${Math.round((i * 18 + performance.now() / 15) % 360)}, 80%, ${i === 0 ? 55 : 60}%)`
-        : (i === 0 ? colors.head : mixColor(colors.light, colors.dark, t));
-      roundRectPath(cx - size / 2, cy - size / 2, size, size, size / 3);
+        : (i === 0 ? colors.head : (classic ? colors.dark : mixColor(colors.light, colors.dark, t)));
+      roundRectPath(cx - size / 2, cy - size / 2, size, size, classic ? 1 : size / 3);
       ctx.fill();
     }
 
@@ -1280,7 +1328,7 @@
     ctx.save();
     ctx.translate(shake.x, shake.y);
 
-    drawGrid();
+    if (settings.gridLinesEnabled) drawGrid();
     drawObstacles();
     drawFood();
     if (settings.ghost && !settings.twoPlayer) drawGhost();
@@ -1740,6 +1788,14 @@
   openStatsBtn.addEventListener('click', () => { renderStats(); statsModal.classList.remove('hidden'); });
   statsClose.addEventListener('click', () => statsModal.classList.add('hidden'));
 
+  openGraphicsBtn.addEventListener('click', () => { populateGraphicsUI(); graphicsModal.classList.remove('hidden'); });
+  graphicsClose.addEventListener('click', () => graphicsModal.classList.add('hidden'));
+  optSnakeStyle.addEventListener('change', e => { settings.snakeStyle = e.target.value; saveSettings(); });
+  optParticles.addEventListener('change', e => { settings.particlesEnabled = e.target.checked; saveSettings(); });
+  optShake.addEventListener('change', e => { settings.shakeEnabled = e.target.checked; saveSettings(); });
+  optGlow.addEventListener('change', e => { settings.glowEnabled = e.target.checked; saveSettings(); applyGlow(); });
+  optGridLines.addEventListener('change', e => { settings.gridLinesEnabled = e.target.checked; saveSettings(); });
+
   // ---------- level editor ----------
   function enterEditor() {
     settingsModal.classList.add('hidden');
@@ -1856,6 +1912,7 @@
   // ---------- init ----------
   applyTheme();
   applyColorblind();
+  applyGlow();
   populateSettingsUI();
   resizeCanvasIfNeeded();
   reset();
