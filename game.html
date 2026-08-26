@@ -8,9 +8,11 @@
     --bg: #0f172a;
     --panel: #1e293b;
     --grid: #16213a;
-    --snake: #4ade80;
+    --snake-dark: #16803d;
+    --snake-light: #86efac;
     --snake-head: #22c55e;
     --food: #f87171;
+    --food-glow: #fca5a5;
     --text: #e2e8f0;
     --accent: #38bdf8;
   }
@@ -34,10 +36,25 @@
   }
   #hud {
     display: flex;
+    align-items: center;
     gap: 24px;
     font-size: 1.1rem;
   }
   #hud span { color: var(--accent); font-weight: bold; }
+  #mute-btn {
+    background: transparent;
+    border: 2px solid var(--panel);
+    color: var(--text);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 1.1rem;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #mute-btn:hover { transform: scale(1.08); border-color: var(--accent); }
   #board-wrap {
     position: relative;
   }
@@ -46,7 +63,7 @@
     border: 3px solid var(--panel);
     border-radius: 8px;
     box-shadow: 0 0 30px rgba(56, 189, 248, 0.15);
-    image-rendering: pixelated;
+    display: block;
   }
   #overlay {
     position: absolute;
@@ -103,6 +120,7 @@
   <div id="hud">
     <div>Score: <span id="score">0</span></div>
     <div>Best: <span id="best">0</span></div>
+    <button id="mute-btn" title="Toggle sound">🔊</button>
   </div>
 
   <div id="board-wrap">
@@ -126,9 +144,18 @@
 (function () {
   const canvas = document.getElementById('board');
   const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
   const cell = 20;
   const cols = canvas.width / cell;
   const rows = canvas.height / cell;
+
+  // render canvas at device pixel ratio for crisp, smooth edges
+  const cssSize = canvas.width;
+  canvas.width = cssSize * dpr;
+  canvas.height = cssSize * dpr;
+  canvas.style.width = cssSize + 'px';
+  canvas.style.height = cssSize + 'px';
+  ctx.scale(dpr, dpr);
 
   const scoreEl = document.getElementById('score');
   const bestEl = document.getElementById('best');
@@ -136,12 +163,64 @@
   const overlayTitle = document.getElementById('overlay-title');
   const overlayMsg = document.getElementById('overlay-msg');
   const startBtn = document.getElementById('start-btn');
+  const muteBtn = document.getElementById('mute-btn');
 
   const BEST_KEY = 'snake-best-score';
+  const MUTE_KEY = 'snake-muted';
   let best = Number(localStorage.getItem(BEST_KEY)) || 0;
   bestEl.textContent = best;
+  let muted = localStorage.getItem(MUTE_KEY) === '1';
+  muteBtn.textContent = muted ? '🔇' : '🔊';
 
-  let snake, dir, nextDir, food, score, speedMs, timer, running, paused;
+  // ---------- sound ----------
+  let audioCtx = null;
+  function ensureAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function beep({ freq = 440, duration = 0.1, type = 'sine', endFreq = null, volume = 0.2, delay = 0 }) {
+    if (muted) return;
+    ensureAudio();
+    const t0 = audioCtx.currentTime + delay;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0);
+    if (endFreq) osc.frequency.exponentialRampToValueAtTime(endFreq, t0 + duration);
+    gain.gain.setValueAtTime(volume, t0);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t0);
+    osc.stop(t0 + duration + 0.02);
+  }
+
+  const sfx = {
+    eat: () => beep({ freq: 520, endFreq: 900, duration: 0.12, type: 'square', volume: 0.18 }),
+    turn: () => beep({ freq: 300, duration: 0.03, type: 'triangle', volume: 0.05 }),
+    start: () => {
+      beep({ freq: 330, duration: 0.09, type: 'sine', volume: 0.15 });
+      beep({ freq: 440, duration: 0.09, type: 'sine', volume: 0.15, delay: 0.09 });
+      beep({ freq: 660, duration: 0.12, type: 'sine', volume: 0.15, delay: 0.18 });
+    },
+    gameOver: () => {
+      beep({ freq: 300, endFreq: 90, duration: 0.4, type: 'sawtooth', volume: 0.2 });
+    },
+  };
+
+  muteBtn.addEventListener('click', () => {
+    muted = !muted;
+    localStorage.setItem(MUTE_KEY, muted ? '1' : '0');
+    muteBtn.textContent = muted ? '🔇' : '🔊';
+    if (!muted) { ensureAudio(); beep({ freq: 500, duration: 0.05, volume: 0.1 }); }
+  });
+
+  // ---------- game state ----------
+  let snake, prevSnake, dir, nextDir, food, score, speedMs, timer, running, paused;
+  let lastStepTime = 0;
+  let rafId = null;
 
   function reset() {
     snake = [
@@ -149,14 +228,15 @@
       { x: Math.floor(cols / 2) - 1, y: Math.floor(rows / 2) },
       { x: Math.floor(cols / 2) - 2, y: Math.floor(rows / 2) },
     ];
+    prevSnake = snake.map(s => ({ ...s }));
     dir = { x: 1, y: 0 };
     nextDir = dir;
     score = 0;
-    speedMs = 120;
+    speedMs = 130;
     paused = false;
     scoreEl.textContent = score;
     placeFood();
-    draw();
+    lastStepTime = performance.now();
   }
 
   function placeFood() {
@@ -170,38 +250,9 @@
     food = pos;
   }
 
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  function lerp(a, b, t) { return a + (b - a) * t; }
 
-    // subtle grid
-    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
-    for (let i = 0; i <= cols; i++) {
-      ctx.beginPath();
-      ctx.moveTo(i * cell, 0);
-      ctx.lineTo(i * cell, canvas.height);
-      ctx.stroke();
-    }
-    for (let j = 0; j <= rows; j++) {
-      ctx.beginPath();
-      ctx.moveTo(0, j * cell);
-      ctx.lineTo(canvas.width, j * cell);
-      ctx.stroke();
-    }
-
-    // food
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--food');
-    roundRect(food.x * cell + 2, food.y * cell + 2, cell - 4, cell - 4, 5);
-
-    // snake
-    snake.forEach((seg, i) => {
-      ctx.fillStyle = i === 0
-        ? getComputedStyle(document.documentElement).getPropertyValue('--snake-head')
-        : getComputedStyle(document.documentElement).getPropertyValue('--snake');
-      roundRect(seg.x * cell + 1, seg.y * cell + 1, cell - 2, cell - 2, 4);
-    });
-  }
-
-  function roundRect(x, y, w, h, r) {
+  function roundRectPath(x, y, w, h, r) {
     ctx.beginPath();
     ctx.moveTo(x + r, y);
     ctx.arcTo(x + w, y, x + w, y + h, r);
@@ -209,7 +260,130 @@
     ctx.arcTo(x, y + h, x, y, r);
     ctx.arcTo(x, y, x + w, y, r);
     ctx.closePath();
+  }
+
+  function draw(alpha) {
+    ctx.clearRect(0, 0, cssSize, cssSize);
+
+    // subtle grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= cols; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i * cell, 0);
+      ctx.lineTo(i * cell, cssSize);
+      ctx.stroke();
+    }
+    for (let j = 0; j <= rows; j++) {
+      ctx.beginPath();
+      ctx.moveTo(0, j * cell);
+      ctx.lineTo(cssSize, j * cell);
+      ctx.stroke();
+    }
+
+    // food — pulsing glow
+    const pulse = 1 + 0.12 * Math.sin(performance.now() / 180);
+    const fx = food.x * cell + cell / 2;
+    const fy = food.y * cell + cell / 2;
+    const foodR = (cell / 2 - 3) * pulse;
+    const grad = ctx.createRadialGradient(fx, fy, 1, fx, fy, foodR + 6);
+    grad.addColorStop(0, getCss('--food-glow'));
+    grad.addColorStop(1, 'rgba(248,113,113,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(fx, fy, foodR + 6, 0, Math.PI * 2);
     ctx.fill();
+    ctx.fillStyle = getCss('--food');
+    ctx.beginPath();
+    ctx.arc(fx, fy, foodR, 0, Math.PI * 2);
+    ctx.fill();
+
+    // interpolated snake positions
+    const n = snake.length;
+    const points = new Array(n);
+    for (let i = 0; i < n; i++) {
+      const cur = snake[i];
+      const prev = i === 0 ? prevSnake[0] : (prevSnake[i - 1] || cur);
+      // avoid interpolating across a wrap/teleport-sized jump
+      const dx = cur.x - prev.x, dy = cur.y - prev.y;
+      const jumpTooFar = Math.abs(dx) > 1 || Math.abs(dy) > 1;
+      points[i] = jumpTooFar
+        ? { x: cur.x, y: cur.y }
+        : { x: lerp(prev.x, cur.x, alpha), y: lerp(prev.y, cur.y, alpha) };
+    }
+
+    // body: smooth connected ribbon using rounded segments + gradient
+    for (let i = n - 1; i >= 0; i--) {
+      const p = points[i];
+      const t = n <= 1 ? 0 : i / (n - 1);
+      const size = cell - 2 - t * 4; // taper toward tail
+      const cx = p.x * cell + cell / 2;
+      const cy = p.y * cell + cell / 2;
+      const shade = lerp(0, 1, t);
+      ctx.fillStyle = i === 0 ? getCss('--snake-head') : mixColor(getCss('--snake-light'), getCss('--snake-dark'), shade);
+      roundRectPath(cx - size / 2, cy - size / 2, size, size, size / 3);
+      ctx.fill();
+    }
+
+    // head details: eyes + tongue oriented with direction
+    const headP = points[0];
+    const hx = headP.x * cell + cell / 2;
+    const hy = headP.y * cell + cell / 2;
+    const d = running && !paused ? nextDir : dir;
+    const ex = d.x, ey = d.y;
+    const perpX = -ey, perpY = ex;
+    const eyeOffset = 4.5;
+    const eyeForward = 3;
+    [-1, 1].forEach(side => {
+      const eyeX = hx + ex * eyeForward + perpX * eyeOffset * side;
+      const eyeY = hy + ey * eyeForward + perpY * eyeOffset * side;
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(eyeX, eyeY, 2.1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(eyeX - ex * 0.6, eyeY - ey * 0.6, 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // flicking tongue
+    if (running && !paused) {
+      const flick = Math.sin(performance.now() / 90) > 0.4;
+      if (flick) {
+        const tx = hx + ex * (cell / 2);
+        const ty = hy + ey * (cell / 2);
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(hx + ex * (cell / 2 - 2), hy + ey * (cell / 2 - 2));
+        ctx.lineTo(tx + ex * 4, ty + ey * 4);
+        ctx.moveTo(tx + ex * 4, ty + ey * 4);
+        ctx.lineTo(tx + ex * 4 + perpX * 2, ty + ey * 4 + perpY * 2);
+        ctx.moveTo(tx + ex * 4, ty + ey * 4);
+        ctx.lineTo(tx + ex * 4 - perpX * 2, ty + ey * 4 - perpY * 2);
+        ctx.stroke();
+      }
+    }
+  }
+
+  function getCss(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function mixColor(c1, c2, t) {
+    const a = hexToRgb(c1), b = hexToRgb(c2);
+    const r = Math.round(lerp(a.r, b.r, t));
+    const g = Math.round(lerp(a.g, b.g, t));
+    const bl = Math.round(lerp(a.b, b.b, t));
+    return `rgb(${r},${g},${bl})`;
+  }
+
+  function hexToRgb(hex) {
+    hex = hex.replace('#', '');
+    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    const num = parseInt(hex, 16);
+    return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
   }
 
   function step() {
@@ -226,18 +400,20 @@
       return;
     }
 
+    prevSnake = snake.map(s => ({ ...s }));
     snake.unshift(head);
 
     if (head.x === food.x && head.y === food.y) {
       score++;
       scoreEl.textContent = score;
+      sfx.eat();
       if (score > best) {
         best = score;
         bestEl.textContent = best;
         localStorage.setItem(BEST_KEY, best);
       }
       placeFood();
-      if (speedMs > 55) {
+      if (speedMs > 60) {
         speedMs -= 3;
         restartTimer();
       }
@@ -245,7 +421,7 @@
       snake.pop();
     }
 
-    draw();
+    lastStepTime = performance.now();
   }
 
   function restartTimer() {
@@ -253,9 +429,18 @@
     timer = setInterval(step, speedMs);
   }
 
+  function renderLoop() {
+    if (running) {
+      const alpha = paused ? 1 : Math.min((performance.now() - lastStepTime) / speedMs, 1);
+      draw(alpha);
+    }
+    rafId = requestAnimationFrame(renderLoop);
+  }
+
   function gameOver() {
     running = false;
     clearInterval(timer);
+    sfx.gameOver();
     overlayTitle.textContent = 'Game Over';
     overlayMsg.textContent = `Score: ${score} — Best: ${best}`;
     startBtn.textContent = 'Play Again';
@@ -263,9 +448,11 @@
   }
 
   function startGame() {
+    ensureAudio();
     reset();
     running = true;
     overlay.classList.add('hidden');
+    sfx.start();
     restartTimer();
   }
 
@@ -279,15 +466,18 @@
   };
 
   function trySetDir(newDir) {
-    if (!running) return;
+    if (!running || paused) return;
     // prevent reversing directly into itself
     if (newDir.x === -dir.x && newDir.y === -dir.y) return;
+    if (newDir.x === nextDir.x && newDir.y === nextDir.y) return;
     nextDir = newDir;
+    sfx.turn();
   }
 
   document.addEventListener('keydown', (e) => {
     if (e.key === ' ') {
       if (running) paused = !paused;
+      if (paused) lastStepTime = performance.now();
       e.preventDefault();
       return;
     }
@@ -330,6 +520,8 @@
   });
 
   reset();
+  draw(1);
+  renderLoop();
 })();
 </script>
 </body>
