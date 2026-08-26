@@ -132,7 +132,7 @@
     </div>
   </div>
 
-  <p id="hint">Arrow keys / WASD to move · Space to pause · Eat the red food to grow. Don't hit the walls or yourself!</p>
+  <p id="hint">Arrow keys / WASD to move · Space to pause · Eat the apple to grow. Don't hit the walls or yourself!</p>
 
   <div id="touch-controls">
     <div></div><button data-dir="up">▲</button><div></div>
@@ -232,7 +232,7 @@
     dir = { x: 1, y: 0 };
     nextDir = dir;
     score = 0;
-    speedMs = 130;
+    speedMs = 200;
     paused = false;
     scoreEl.textContent = score;
     placeFood();
@@ -281,21 +281,59 @@
       ctx.stroke();
     }
 
-    // food — pulsing glow
-    const pulse = 1 + 0.12 * Math.sin(performance.now() / 180);
+    // food — a little apple, gently bobbing
+    const bob = Math.sin(performance.now() / 260) * 1.2;
     const fx = food.x * cell + cell / 2;
-    const fy = food.y * cell + cell / 2;
-    const foodR = (cell / 2 - 3) * pulse;
-    const grad = ctx.createRadialGradient(fx, fy, 1, fx, fy, foodR + 6);
-    grad.addColorStop(0, getCss('--food-glow'));
-    grad.addColorStop(1, 'rgba(248,113,113,0)');
-    ctx.fillStyle = grad;
+    const fy = food.y * cell + cell / 2 + bob;
+    const appleR = cell / 2 - 3;
+
+    // soft glow behind it
+    const glow = ctx.createRadialGradient(fx, fy, 1, fx, fy, appleR + 7);
+    glow.addColorStop(0, getCss('--food-glow'));
+    glow.addColorStop(1, 'rgba(248,113,113,0)');
+    ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.arc(fx, fy, foodR + 6, 0, Math.PI * 2);
+    ctx.arc(fx, fy, appleR + 7, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = getCss('--food');
+
+    // apple body with shading (darker red, highlight on upper-left)
+    const bodyGrad = ctx.createRadialGradient(
+      fx - appleR * 0.4, fy - appleR * 0.4, 1,
+      fx, fy, appleR * 1.3
+    );
+    bodyGrad.addColorStop(0, '#fecaca');
+    bodyGrad.addColorStop(0.4, getCss('--food'));
+    bodyGrad.addColorStop(1, '#b91c1c');
+    ctx.fillStyle = bodyGrad;
     ctx.beginPath();
-    ctx.arc(fx, fy, foodR, 0, Math.PI * 2);
+    // slight heart-like dip at the top for an apple silhouette
+    ctx.arc(fx, fy + appleR * 0.1, appleR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(fx - appleR * 0.35, fy - appleR * 0.45, appleR * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(fx + appleR * 0.35, fy - appleR * 0.45, appleR * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // small shine
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.beginPath();
+    ctx.ellipse(fx - appleR * 0.35, fy - appleR * 0.15, appleR * 0.22, appleR * 0.32, -0.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // stem
+    ctx.strokeStyle = '#7c4a1e';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(fx, fy - appleR * 0.9);
+    ctx.quadraticCurveTo(fx + 1.5, fy - appleR * 1.3, fx + 0.5, fy - appleR * 1.6);
+    ctx.stroke();
+
+    // leaf
+    ctx.fillStyle = '#4ade80';
+    ctx.beginPath();
+    ctx.ellipse(fx + appleR * 0.7, fy - appleR * 1.15, appleR * 0.4, appleR * 0.22, -0.6, 0, Math.PI * 2);
     ctx.fill();
 
     // interpolated snake positions
@@ -413,7 +451,7 @@
         localStorage.setItem(BEST_KEY, best);
       }
       placeFood();
-      if (speedMs > 60) {
+      if (speedMs > 110) {
         speedMs -= 3;
         restartTimer();
       }
