@@ -507,6 +507,15 @@
   <div id="graphics-modal" class="modal hidden">
     <div class="modal-card">
       <h2>Graphics</h2>
+      <label>Graphics quality
+        <select id="opt-quality">
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+      </label>
+      <p class="modal-hint">Sets particles, shake, glow and snake style below all at once — pick one, then fine-tune if you like.</p>
+      <hr class="modal-divider">
       <label>Snake style
         <select id="opt-snakestyle">
           <option value="smooth">Smooth (gradient, tapered)</option>
@@ -644,6 +653,7 @@
   const statsGrid = document.getElementById('stats-grid');
   const graphicsModal = document.getElementById('graphics-modal');
   const graphicsClose = document.getElementById('graphics-close');
+  const optQuality = document.getElementById('opt-quality');
   const optSnakeStyle = document.getElementById('opt-snakestyle');
   const optParticles = document.getElementById('opt-particles');
   const optShake = document.getElementById('opt-shake');
@@ -664,6 +674,7 @@
       reducedMotion: window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
       skin: 'classic', ghost: false, layoutName: '',
       snakeStyle: 'smooth', particlesEnabled: true, shakeEnabled: true, glowEnabled: true, gridLinesEnabled: true,
+      graphicsQuality: 'high',
     },
     safeParse(localStorage.getItem(SETTINGS_KEY))
   );
@@ -725,11 +736,30 @@
   }
 
   function populateGraphicsUI() {
+    optQuality.value = settings.graphicsQuality;
     optSnakeStyle.value = settings.snakeStyle;
     optParticles.checked = settings.particlesEnabled;
     optShake.checked = settings.shakeEnabled;
     optGlow.checked = settings.glowEnabled;
     optGridLines.checked = settings.gridLinesEnabled;
+  }
+
+  const QUALITY_PRESETS = {
+    low:    { particlesEnabled: false, shakeEnabled: false, glowEnabled: false, gridLinesEnabled: true,  snakeStyle: 'classic' },
+    medium: { particlesEnabled: true,  shakeEnabled: true,  glowEnabled: false, gridLinesEnabled: true,  snakeStyle: 'smooth' },
+    high:   { particlesEnabled: true,  shakeEnabled: true,  glowEnabled: true,  gridLinesEnabled: true,  snakeStyle: 'smooth' },
+  };
+  function applyQualityPreset(tier) {
+    settings.graphicsQuality = tier;
+    Object.assign(settings, QUALITY_PRESETS[tier] || QUALITY_PRESETS.high);
+    saveSettings();
+    applyGlow();
+    populateGraphicsUI();
+  }
+  function particleCountForQuality() {
+    if (settings.graphicsQuality === 'low') return 6;
+    if (settings.graphicsQuality === 'medium') return 10;
+    return 14;
   }
 
   function populateSkinSelect() {
@@ -913,8 +943,8 @@
 
   // ---------- game state ----------
   let gameState = 'ready'; // ready | countdown | playing | paused | gameover | editor
-  let snake, prevSnake, dir, nextDir, score;
-  let snake2, prevSnake2, dir2, nextDir2, score2;
+  let snake, prevSnake, dir, dirQueue1, score;
+  let snake2, prevSnake2, dir2, dirQueue2, score2;
   let food, obstacles, level, speedMs, timer;
   let lastStepTime = 0, lastFrameTime = performance.now();
   let frenzyUntil = 0, slomoUntil = 0, shakeUntil = 0;
@@ -958,8 +988,8 @@
     }
     prevSnake = snake.map(s => ({ ...s }));
     prevSnake2 = snake2.map(s => ({ ...s }));
-    nextDir = dir;
-    nextDir2 = dir2;
+    dirQueue1 = [];
+    dirQueue2 = [];
     score = 0;
     score2 = 0;
     level = 1;
@@ -1079,7 +1109,7 @@
   function spawnParticles(cellX, cellY, color) {
     if (settings.reducedMotion || !settings.particlesEnabled) return;
     const cx = cellX * CELL + CELL / 2, cy = cellY * CELL + CELL / 2;
-    for (let i = 0; i < 14; i++) {
+    for (let i = 0; i < particleCountForQuality(); i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = 0.03 + Math.random() * 0.06;
       particles.push({ x: cx, y: cy, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, life: 500, maxLife: 500, color });
@@ -1333,10 +1363,10 @@
     drawFood();
     if (settings.ghost && !settings.twoPlayer) drawGhost();
 
-    renderSnake(snake, prevSnake, dir, nextDir, getP1Colors(), alpha);
+    renderSnake(snake, prevSnake, dir, dirQueue1[0] || dir, getP1Colors(), alpha);
     if (settings.twoPlayer && settings.mode === 'classic') {
       const p2Colors = { head: getCss('--p2-head'), light: getCss('--p2-light'), dark: getCss('--p2-dark') };
-      renderSnake(snake2, prevSnake2, dir2, nextDir2, p2Colors, alpha);
+      renderSnake(snake2, prevSnake2, dir2, dirQueue2[0] || dir2, p2Colors, alpha);
     }
 
     drawParticles();
@@ -1414,7 +1444,7 @@
   function step() {
     if (gameState !== 'playing') return;
 
-    dir = nextDir;
+    if (dirQueue1.length) dir = dirQueue1.shift();
     const head1 = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
     wrapPosition(head1);
     let dead1 = checkDeath(snake, head1);
@@ -1422,7 +1452,7 @@
     let head2 = null, dead2 = false;
     const twoP = settings.twoPlayer && settings.mode === 'classic';
     if (twoP) {
-      dir2 = nextDir2;
+      if (dirQueue2.length) dir2 = dirQueue2.shift();
       head2 = { x: snake2[0].x + dir2.x, y: snake2[0].y + dir2.y };
       wrapPosition(head2);
       dead2 = checkDeath(snake2, head2);
@@ -1790,6 +1820,7 @@
 
   openGraphicsBtn.addEventListener('click', () => { populateGraphicsUI(); graphicsModal.classList.remove('hidden'); });
   graphicsClose.addEventListener('click', () => graphicsModal.classList.add('hidden'));
+  optQuality.addEventListener('change', e => applyQualityPreset(e.target.value));
   optSnakeStyle.addEventListener('change', e => { settings.snakeStyle = e.target.value; saveSettings(); });
   optParticles.addEventListener('change', e => { settings.particlesEnabled = e.target.checked; saveSettings(); });
   optShake.addEventListener('change', e => { settings.shakeEnabled = e.target.checked; saveSettings(); });
@@ -1846,17 +1877,17 @@
     return null;
   }
 
+  const MAX_QUEUED_TURNS = 2;
   function trySetDir(player, newDir) {
     if (gameState !== 'playing') return;
-    if (player === 1) {
-      if (newDir.x === -dir.x && newDir.y === -dir.y) return;
-      if (newDir.x === nextDir.x && newDir.y === nextDir.y) return;
-      nextDir = newDir;
-    } else {
-      if (newDir.x === -dir2.x && newDir.y === -dir2.y) return;
-      if (newDir.x === nextDir2.x && newDir.y === nextDir2.y) return;
-      nextDir2 = newDir;
-    }
+    const isP1 = player === 1;
+    const queue = isP1 ? dirQueue1 : dirQueue2;
+    const curDir = isP1 ? dir : dir2;
+    const lastQueued = queue.length ? queue[queue.length - 1] : curDir;
+    if (newDir.x === -lastQueued.x && newDir.y === -lastQueued.y) return; // would reverse into itself
+    if (newDir.x === lastQueued.x && newDir.y === lastQueued.y) return; // no-op, already heading that way
+    if (queue.length >= MAX_QUEUED_TURNS) return;
+    queue.push(newDir);
     sfx.turn();
   }
 
