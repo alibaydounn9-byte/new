@@ -680,6 +680,7 @@
           <option value="boss">Boss Challenge</option>
           <option value="sandbox">Sandbox</option>
           <option value="speedrun">Speedrun (Any%)</option>
+          <option value="fillwin">Fill to Win</option>
         </select>
       </label>
       <p class="modal-hint hidden" id="zen-hint">Zen always wraps around edges and has no obstacles or death — press ⏹ to end your run.</p>
@@ -687,6 +688,7 @@
       <p class="modal-hint hidden" id="weekly-hint">Weekly Challenge always uses Medium grid, Normal difficulty, no wrap — same board all week.</p>
       <p class="modal-hint hidden" id="boss-hint">Boss Challenge: hazards escalate fast, and every 3 levels a Boss with a health bar appears — eating apples damages it; defeat it for a +10 bonus.</p>
       <p class="modal-hint hidden" id="sandbox-hint">Sandbox: no death, no obstacles ever spawn. Press 1-8 to spawn a specific apple type on demand.</p>
+      <p class="modal-hint hidden" id="fillwin-hint">Fill to Win: no rocks ever spawn on the map — grow your snake to fill every single cell of the board to win! Crashing into a wall or yourself still ends the run.</p>
       <p class="modal-hint hidden" id="speedrun-hint">Speedrun: race to score 20 as fast as possible — the clock counts up.</p>
       <label class="row"><input type="checkbox" id="opt-hunger"> Hunger mode (shrink if you don't eat in time)</label>
       <label class="row"><input type="checkbox" id="opt-swarm"> Multiple apples (swarm)</label>
@@ -1267,6 +1269,7 @@
   const optUltraTrail = document.getElementById('opt-ultratrail');
   const optUltraVignette = document.getElementById('opt-ultravignette');
   const sandboxHint = document.getElementById('sandbox-hint');
+  const fillwinHint = document.getElementById('fillwin-hint');
   const speedrunHint = document.getElementById('speedrun-hint');
   const speedrunWrap = document.getElementById('speedrun-wrap');
   const speedrunElapsedEl = document.getElementById('speedrun-elapsed');
@@ -1630,6 +1633,7 @@
   }
 
   function isDailyLikeMode() { return settings.mode === 'daily' || settings.mode === 'weekly'; }
+  function isFillToWinMode() { return settings.mode === 'fillwin' || settings.fillToWin; }
 
   function updateModeDependentUI() {
     zenHint.classList.toggle('hidden', settings.mode !== 'zen');
@@ -1638,6 +1642,7 @@
     bossHint.classList.toggle('hidden', settings.mode !== 'boss');
     sandboxHint.classList.toggle('hidden', settings.mode !== 'sandbox');
     speedrunHint.classList.toggle('hidden', settings.mode !== 'speedrun');
+    fillwinHint.classList.toggle('hidden', settings.mode !== 'fillwin');
     optTwoPlayer.disabled = settings.mode !== 'classic';
     optVsAI.disabled = settings.mode !== 'classic';
     optLayout.disabled = settings.mode !== 'classic';
@@ -1646,7 +1651,9 @@
     optGrid.disabled = isDailyLikeMode();
     optDifficulty.disabled = isDailyLikeMode();
     optGhost.disabled = settings.twoPlayer && !settings.vsAI;
-    optHunger.disabled = settings.mode === 'zen' || settings.mode === 'sandbox';
+    optHunger.disabled = settings.mode === 'zen' || settings.mode === 'sandbox' || settings.mode === 'fillwin';
+    optSwarm.disabled = settings.mode === 'fillwin';
+    optFillWin.disabled = settings.mode === 'fillwin';
     optAiSkill.disabled = !settings.vsAI || settings.mode !== 'classic';
     timeWrap.classList.toggle('hidden', settings.mode !== 'time');
     speedrunWrap.classList.toggle('hidden', settings.mode !== 'speedrun');
@@ -1908,7 +1915,7 @@
     score2 = 0;
     level = 1;
     food = null;
-    obstacles = settings.fillToWin ? [] : (loadCustomLayout() || []);
+    obstacles = isFillToWinMode() ? [] : (loadCustomLayout() || []);
     frenzyUntil = 0;
     slomoUntil = 0;
     magnetUntil = 0;
@@ -2027,7 +2034,7 @@
   }
 
   function addObstacle(forceMoving) {
-    if (settings.mode === 'zen' || settings.mode === 'sandbox' || settings.fillToWin) return;
+    if (settings.mode === 'zen' || settings.mode === 'sandbox' || isFillToWinMode()) return;
     if (obstacles.length >= 14) return;
     const occ = occupiedCells();
     const heads = [snake[0], snake2[0]].filter(Boolean);
@@ -3170,7 +3177,7 @@
       }
     }
 
-    if (settings.fillToWin && !twoP && snake.length >= cols * rows) {
+    if (isFillToWinMode() && !twoP && snake.length >= cols * rows) {
       if (attractMode) { reset(); return; }
       gameOver(false, false, 'fillwin');
       return;
@@ -3267,6 +3274,7 @@
       boss: 'Hazards escalate fast, and every 3 levels a Boss with a health bar appears — eating apples damages it.',
       sandbox: 'No death, no obstacles. Press 1-8 to spawn apple types on demand.',
       speedrun: `Race to score ${SPEEDRUN_TARGET} as fast as you can!`,
+      fillwin: 'No rocks ever spawn — fill the entire board with your snake to win!',
     };
     overlayMsg.textContent = modeHint[settings.mode] || modeHint.classic;
     highscoreEntry.classList.add('hidden');
@@ -3334,6 +3342,7 @@
     if (mode === 'boss') return 'snake-highscores-boss-v1';
     if (mode === 'sandbox') return 'snake-highscores-sandbox-v1';
     if (mode === 'speedrun') return 'snake-highscores-speedrun-v1';
+    if (mode === 'fillwin') return 'snake-highscores-fillwin-v1';
     if (mode === 'classic' && !isHumanTwoPlayer() && !settings.vsAI) return SCORES_KEY + '-' + settings.grid;
     return SCORES_KEY;
   }
@@ -3360,6 +3369,7 @@
       'snake-highscores-time-v1': 'Time Attack — Best Runs',
       'snake-highscores-zen-v1': 'Zen — Best Runs',
       'snake-highscores-boss-v1': 'Boss Challenge — Best Runs',
+      'snake-highscores-fillwin-v1': 'Fill to Win — Best Runs',
     };
     let fallbackTitle = "Today's Attempts";
     if (key.startsWith('snake-highscores-weekly-')) fallbackTitle = "This Week's Attempts";
