@@ -164,6 +164,20 @@
     gap: 4px;
     white-space: nowrap;
   }
+  #combo-meter {
+    width: 60px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--panel-2);
+    overflow: hidden;
+  }
+  #combo-meter-fill {
+    height: 100%;
+    width: 100%;
+    background: #f97316;
+    transform-origin: left;
+    transition: transform 0.08s linear, background 0.15s ease;
+  }
   .icon-btn {
     background: var(--panel);
     border: 2px solid var(--panel);
@@ -377,6 +391,9 @@
     font-size: 0.9rem;
   }
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+  #custom-color-row { display: flex; flex-direction: row; gap: 14px; }
+  #custom-color-row label { flex-direction: row; align-items: center; gap: 6px; color: var(--text); font-size: 0.85rem; }
+  input[type="color"] { width: 36px; height: 28px; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: var(--panel-2); cursor: pointer; }
   .modal-hint { font-size: 0.75rem; color: var(--text-dim); margin: 0; }
   .modal-divider { border: none; border-top: 1px solid var(--border); margin: 2px 0; }
   .link-row { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -450,6 +467,7 @@
     <div class="hud-score">Lv <span id="level">1</span></div>
     <div class="hud-score hidden" id="time-wrap">⏱ <span id="time-left">60</span>s <span id="time-split"></span></div>
     <div id="effect-badges"></div>
+    <div id="combo-meter" class="hidden"><div id="combo-meter-fill"></div></div>
     <button class="icon-btn hidden" id="zen-stop-btn" title="End Zen run">⏹</button>
     <button class="icon-btn" id="mute-btn" title="Toggle sound">🔊</button>
     <button class="icon-btn" id="music-btn" title="Toggle music">🎵</button>
@@ -507,12 +525,16 @@
           <option value="zen">Zen (no death)</option>
           <option value="time">Time Attack (60s)</option>
           <option value="daily">Daily Challenge</option>
+          <option value="weekly">Weekly Challenge</option>
           <option value="boss">Boss Challenge</option>
         </select>
       </label>
       <p class="modal-hint hidden" id="zen-hint">Zen always wraps around edges and has no obstacles or death — press ⏹ to end your run.</p>
       <p class="modal-hint hidden" id="daily-hint">Daily Challenge always uses Medium grid, Normal difficulty, no wrap — same board all day.</p>
+      <p class="modal-hint hidden" id="weekly-hint">Weekly Challenge always uses Medium grid, Normal difficulty, no wrap — same board all week.</p>
       <p class="modal-hint hidden" id="boss-hint">Boss Challenge: hazards escalate fast — every level adds an extra, always-moving obstacle.</p>
+      <label class="row"><input type="checkbox" id="opt-hunger"> Hunger mode (shrink if you don't eat in time)</label>
+      <label class="row"><input type="checkbox" id="opt-swarm"> Multiple apples (swarm)</label>
 
       <label>Grid size
         <select id="opt-grid">
@@ -561,12 +583,29 @@
       <p class="section-title">Players</p>
       <label class="row"><input type="checkbox" id="opt-twoplayer"> Two-player (P1: Arrows · P2: WASD)</label>
       <label class="row"><input type="checkbox" id="opt-vsai"> Play vs AI (single player)</label>
+      <label>AI skill
+        <select id="opt-aiskill">
+          <option value="easy">Easy</option>
+          <option value="smart">Smart</option>
+          <option value="ruthless">Ruthless</option>
+        </select>
+      </label>
       <label class="row"><input type="checkbox" id="opt-ghost"> Show ghost of your best run</label>
+      <label>Your name
+        <input id="opt-p1name" maxlength="12" placeholder="P1">
+      </label>
+      <label>Player 2 name
+        <input id="opt-p2name" maxlength="12" placeholder="P2">
+      </label>
 
       <p class="section-title">Appearance</p>
       <label>Snake skin
         <select id="opt-skin"></select>
       </label>
+      <div class="row hidden" id="custom-color-row">
+        <label>Head color <input type="color" id="opt-customhead"></label>
+        <label>Body color <input type="color" id="opt-custombody"></label>
+      </div>
       <label>Apple skin
         <select id="opt-appleskin"></select>
       </label>
@@ -659,6 +698,8 @@
     <div class="modal-card">
       <h2>Stats</h2>
       <div class="stats-grid" id="stats-grid"></div>
+      <p class="section-title">Recent scores (Classic)</p>
+      <canvas id="stats-sparkline" width="300" height="60" style="width:100%;height:60px;"></canvas>
       <div class="modal-actions">
         <button id="stats-close">Close</button>
       </div>
@@ -689,6 +730,17 @@
       <label class="row"><input type="checkbox" id="opt-glow"> Glow effects</label>
       <label class="row"><input type="checkbox" id="opt-gridlines"> Show grid lines</label>
       <p class="modal-hint">These apply immediately, even mid-game.</p>
+      <div id="ultra-settings" class="hidden">
+        <hr class="modal-divider">
+        <p class="section-title">Ultra effects</p>
+        <label>Bloom intensity
+          <input type="range" id="opt-ultrabloom" min="0" max="100" step="5">
+        </label>
+        <label>Motion trail length
+          <input type="range" id="opt-ultratrail" min="0" max="100" step="5">
+        </label>
+        <label class="row"><input type="checkbox" id="opt-ultravignette"> Screen vignette</label>
+      </div>
       <div class="modal-actions">
         <button id="graphics-close">Done</button>
       </div>
@@ -711,6 +763,8 @@
   <div id="changelog-modal" class="modal hidden">
     <div class="modal-card">
       <h2>What's New</h2>
+      <p class="section-title">v1.6</p>
+      <p class="modal-hint">Hunger mode, a swarm-of-apples option, AI skill levels, player nicknames, full custom snake colors, a live combo meter, a Weekly Challenge, a score history sparkline in Stats, an overhauled snake model, and adjustable Ultra bloom/trail/vignette settings.</p>
       <p class="section-title">v1.5</p>
       <p class="modal-hint">Boss Challenge mode, teleport portals in the level editor, a Watch Replay button, snake trail cosmetics, Time Attack pace splits, separate music/sfx volume, three new themes, a photo button, and Ultra graphics now add drop shadows plus livelier apple animation.</p>
       <p class="section-title">v1.4</p>
@@ -770,6 +824,7 @@
     mono:    { name: 'Monochrome', head: '#e2e8f0', light: '#cbd5e1', dark: '#475569', unlock: 'survivor' },
     rainbow: { name: 'Rainbow', rainbow: true, unlock: 'combo-master' },
     textured: { name: 'Textured', textured: true, head: '#166534', unlock: 'ai-slayer' },
+    custom:  { name: 'Custom Colors', custom: true, unlock: null },
   };
   const APPLE_SKINS = {
     classic: { name: 'Classic Apple', unlock: null },
@@ -904,7 +959,23 @@
   const zenHint = document.getElementById('zen-hint');
   const dailyHint = document.getElementById('daily-hint');
   const bossHint = document.getElementById('boss-hint');
+  const weeklyHint = document.getElementById('weekly-hint');
   const timeSplitEl = document.getElementById('time-split');
+  const optHunger = document.getElementById('opt-hunger');
+  const optSwarm = document.getElementById('opt-swarm');
+  const optAiSkill = document.getElementById('opt-aiskill');
+  const optP1Name = document.getElementById('opt-p1name');
+  const optP2Name = document.getElementById('opt-p2name');
+  const customColorRow = document.getElementById('custom-color-row');
+  const optCustomHead = document.getElementById('opt-customhead');
+  const optCustomBody = document.getElementById('opt-custombody');
+  const comboMeter = document.getElementById('combo-meter');
+  const comboMeterFill = document.getElementById('combo-meter-fill');
+  const statsSparkline = document.getElementById('stats-sparkline');
+  const ultraSettings = document.getElementById('ultra-settings');
+  const optUltraBloom = document.getElementById('opt-ultrabloom');
+  const optUltraTrail = document.getElementById('opt-ultratrail');
+  const optUltraVignette = document.getElementById('opt-ultravignette');
   const optMode = document.getElementById('opt-mode');
   const optGrid = document.getElementById('opt-grid');
   const optWrap = document.getElementById('opt-wrap');
@@ -966,6 +1037,9 @@
       snakeStyle: 'smooth', particlesEnabled: true, shakeEnabled: true, glowEnabled: true, gridLinesEnabled: true,
       graphicsQuality: 'high',
       vsAI: false, vibration: true, soundTheme: 'arcade', musicTrack: 'calm',
+      hungerMode: false, swarmMode: false, aiSkill: 'smart', p1Name: '', p2Name: '',
+      customHead: '#22c55e', customBody: '#16803d',
+      ultraBloom: 50, ultraTrailLength: 50, ultraVignette: false,
     },
     safeParse(localStorage.getItem(SETTINGS_KEY))
   );
@@ -977,9 +1051,10 @@
     gamesPlayed: 0, applesEaten: 0, longestSnake: 3, p1Wins: 0, p2Wins: 0, ties: 0,
     goldenEaten: 0, speedEaten: 0, comboMax: 0, dailyPlays: 0, hardBest: 0, insaneBest: 0, maxLevel: 1,
     aiWins: 0, aiLosses: 0,
-    unlocked: [],
+    unlocked: [], scoreHistory: [],
   }, safeParse(localStorage.getItem(STATS_KEY)));
   if (!Array.isArray(stats.unlocked)) stats.unlocked = [];
+  if (!Array.isArray(stats.scoreHistory)) stats.scoreHistory = [];
   function saveStats() { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); }
 
   function isSkinUnlocked(id) {
@@ -1056,6 +1131,10 @@
     optShake.checked = settings.shakeEnabled;
     optGlow.checked = settings.glowEnabled;
     optGridLines.checked = settings.gridLinesEnabled;
+    optUltraBloom.value = settings.ultraBloom;
+    optUltraTrail.value = settings.ultraTrailLength;
+    optUltraVignette.checked = settings.ultraVignette;
+    ultraSettings.classList.toggle('hidden', settings.graphicsQuality !== 'ultra');
   }
 
   const QUALITY_PRESETS = {
@@ -1136,25 +1215,34 @@
     optLayout.value = layouts.some(l => l.name === prev) ? prev : '';
   }
 
+  function isDailyLikeMode() { return settings.mode === 'daily' || settings.mode === 'weekly'; }
+
   function updateModeDependentUI() {
     zenHint.classList.toggle('hidden', settings.mode !== 'zen');
     dailyHint.classList.toggle('hidden', settings.mode !== 'daily');
+    weeklyHint.classList.toggle('hidden', settings.mode !== 'weekly');
     bossHint.classList.toggle('hidden', settings.mode !== 'boss');
     optTwoPlayer.disabled = settings.mode !== 'classic';
     optVsAI.disabled = settings.mode !== 'classic';
     optLayout.disabled = settings.mode !== 'classic';
-    optWrap.disabled = settings.mode === 'zen' || settings.mode === 'daily';
-    optWrap.checked = settings.mode === 'zen' ? true : (settings.mode === 'daily' ? false : settings.wrap);
-    optGrid.disabled = settings.mode === 'daily';
-    optDifficulty.disabled = settings.mode === 'daily';
+    optWrap.disabled = settings.mode === 'zen' || isDailyLikeMode();
+    optWrap.checked = settings.mode === 'zen' ? true : (isDailyLikeMode() ? false : settings.wrap);
+    optGrid.disabled = isDailyLikeMode();
+    optDifficulty.disabled = isDailyLikeMode();
     optGhost.disabled = settings.twoPlayer && !settings.vsAI;
+    optHunger.disabled = settings.mode === 'zen';
+    optAiSkill.disabled = !settings.vsAI || settings.mode !== 'classic';
     timeWrap.classList.toggle('hidden', settings.mode !== 'time');
+  }
+
+  function updateCustomColorUI() {
+    customColorRow.classList.toggle('hidden', settings.skin !== 'custom');
   }
 
   function populateSettingsUI() {
     optMode.value = settings.mode;
     optGrid.value = settings.grid;
-    optWrap.checked = settings.mode === 'zen' ? true : (settings.mode === 'daily' ? false : settings.wrap);
+    optWrap.checked = settings.mode === 'zen' ? true : (isDailyLikeMode() ? false : settings.wrap);
     optDifficulty.value = settings.difficulty;
     optMusicVolume.value = Math.round(settings.musicVolume * 100);
     optSfxVolume.value = Math.round(settings.sfxVolume * 100);
@@ -1164,15 +1252,23 @@
     optMusicTrack.value = settings.musicTrack;
     optTwoPlayer.checked = settings.twoPlayer;
     optVsAI.checked = settings.vsAI;
+    optAiSkill.value = settings.aiSkill;
     optGhost.checked = settings.ghost;
+    optP1Name.value = settings.p1Name;
+    optP2Name.value = settings.p2Name;
+    optHunger.checked = settings.hungerMode;
+    optSwarm.checked = settings.swarmMode;
     optTheme.value = settings.theme;
     optColorblind.checked = settings.colorblind;
     optReducedMotion.checked = settings.reducedMotion;
+    optCustomHead.value = settings.customHead;
+    optCustomBody.value = settings.customBody;
     populateSkinSelect();
     populateAppleSkinSelect();
     populateTrailSelect();
     populateLayoutSelect();
     updateModeDependentUI();
+    updateCustomColorUI();
   }
 
   let best = Number(localStorage.getItem(BEST_KEY)) || 0;
@@ -1259,11 +1355,11 @@
 
   // ---------- canvas / grid sizing ----------
   let cols, rows, cssSize;
-  function effectiveGrid() { return settings.mode === 'daily' ? 'medium' : settings.grid; }
-  function effectiveDifficultyKey() { return settings.mode === 'daily' ? 'normal' : settings.difficulty; }
+  function effectiveGrid() { return isDailyLikeMode() ? 'medium' : settings.grid; }
+  function effectiveDifficultyKey() { return isDailyLikeMode() ? 'normal' : settings.difficulty; }
   function effectiveWrap() {
     if (settings.mode === 'zen') return true;
-    if (settings.mode === 'daily') return false;
+    if (isDailyLikeMode()) return false;
     return settings.wrap;
   }
   function resizeCanvasIfNeeded() {
@@ -1293,6 +1389,12 @@
     const d = new Date();
     return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
   }
+  function weeklySeed() {
+    const d = new Date();
+    const start = new Date(d.getFullYear(), 0, 1);
+    const week = Math.ceil(((d - start) / 86400000 + start.getDay() + 1) / 7);
+    return d.getFullYear() * 100 + week;
+  }
   let rand = Math.random;
 
   // ---------- game state ----------
@@ -1307,6 +1409,9 @@
   let combo = { 1: { count: 0, last: 0 }, 2: { count: 0, last: 0 } };
   const COMBO_WINDOW = 3000;
   let timeRemaining = 0, timeInterval = null;
+  let lastEatTime = 0, hungerInterval = null;
+  const HUNGER_TIMEOUT = 8000;
+  let extraFoods = [];
   let runTrail = [], ghostTrail = null, ghostIndex = 0;
   let lastRunTrail = [];
   let replayStartTime = 0;
@@ -1337,7 +1442,9 @@
     clearInterval(timeInterval);
     beatBestThisRun = false;
     confetti = [];
-    rand = settings.mode === 'daily' ? mulberry32(dailySeed()) : Math.random;
+    rand = settings.mode === 'daily' ? mulberry32(dailySeed())
+      : settings.mode === 'weekly' ? mulberry32(weeklySeed())
+      : Math.random;
     const midY = Math.floor(rows / 2);
     if (hasSecondSnake()) {
       const x1 = Math.max(2, Math.floor(cols * 0.25));
@@ -1390,14 +1497,45 @@
     timeSplitEl.classList.remove('positive', 'negative');
     bestSplits = settings.mode === 'time' ? safeParse(localStorage.getItem(TIME_SPLITS_KEY)) : null;
     if (!bestSplits || !Array.isArray(bestSplits.splits)) bestSplits = null;
+    lastEatTime = performance.now();
+    clearInterval(hungerInterval);
+    extraFoods = [];
+    maintainSwarmFood();
     placeFood();
     lastStepTime = performance.now();
   }
 
   function occupiedCells() {
-    const list = [...snake, ...snake2, ...obstacles];
+    const list = [...snake, ...snake2, ...obstacles, ...extraFoods];
     if (food) list.push(food);
     return list;
+  }
+
+  function placeExtraFood() {
+    const occ = occupiedCells();
+    let pos, tries = 0;
+    do {
+      pos = { x: Math.floor(rand() * cols), y: Math.floor(rand() * rows) };
+      tries++;
+    } while (occ.some(s => s.x === pos.x && s.y === pos.y) && tries < 200);
+    extraFoods.push(pos);
+  }
+
+  function maintainSwarmFood() {
+    if (!settings.swarmMode) { extraFoods = []; return; }
+    while (extraFoods.length < 3) placeExtraFood();
+  }
+
+  function checkExtraFoodEat(head, player) {
+    const idx = extraFoods.findIndex(f => f.x === head.x && f.y === head.y);
+    if (idx < 0) return { grow: false };
+    if (player === 1) lastEatTime = performance.now();
+    extraFoods.splice(idx, 1);
+    addScore(player, 1);
+    spawnParticles(head.x, head.y, getCss('--food'));
+    sfx.eat('normal');
+    if (!attractMode) { stats.applesEaten++; saveStats(); checkAchievements(); }
+    return { grow: true };
   }
 
   function placeFood() {
@@ -1601,6 +1739,15 @@
     if (slomo) effectBadges.innerHTML += '<span class="badge">❄ Slow-mo</span>';
     if (combo[1].count >= 2) effectBadges.innerHTML += `<span class="badge">🔥 P1 x${Math.min(5, combo[1].count)}</span>`;
     if (settings.twoPlayer && combo[2].count >= 2) effectBadges.innerHTML += `<span class="badge">🔥 P2 x${Math.min(5, combo[2].count)}</span>`;
+
+    if (combo[1].count >= 2 && gameState === 'playing') {
+      comboMeter.classList.remove('hidden');
+      const remaining = Math.max(0, 1 - (now - combo[1].last) / COMBO_WINDOW);
+      comboMeterFill.style.transform = `scaleX(${remaining})`;
+      comboMeterFill.style.background = combo[1].count >= 5 ? '#ef4444' : '#f97316';
+    } else {
+      comboMeter.classList.add('hidden');
+    }
   }
 
   // ---------- screen shake ----------
@@ -1748,6 +1895,13 @@
     const skin = SKINS[settings.skin] || SKINS.classic;
     if (skin.rainbow) return { rainbow: true };
     if (skin.textured) return { textured: true, head: skin.head };
+    if (skin.custom) {
+      return {
+        head: settings.customHead,
+        light: mixColor(settings.customBody, '#ffffff', 0.45),
+        dark: settings.customBody,
+      };
+    }
     return {
       head: skin.head || getCss('--snake-head'),
       light: skin.light || getCss('--snake-light'),
@@ -1929,31 +2083,70 @@
   }
 
   function drawUltraBloom() {
+    const bloomScale = Math.min(2, settings.ultraBloom / 50);
+    if (bloomScale <= 0) return;
     ctx.save();
     ctx.filter = 'blur(7px)';
     ctx.globalCompositeOperation = 'lighter';
     if (food) {
       const fx = food.x * CELL + CELL / 2, fy = food.y * CELL + CELL / 2;
-      ctx.fillStyle = withAlpha(getCss('--food'), 0.5);
+      ctx.fillStyle = withAlpha(getCss('--food'), Math.min(1, 0.5 * bloomScale));
       ctx.beginPath(); ctx.arc(fx, fy, CELL * 0.9, 0, Math.PI * 2); ctx.fill();
     }
     if (snake.length) {
       const hx = snake[0].x * CELL + CELL / 2, hy = snake[0].y * CELL + CELL / 2;
-      ctx.fillStyle = withAlpha(getCss('--snake-head'), 0.45);
+      ctx.fillStyle = withAlpha(getCss('--snake-head'), Math.min(1, 0.45 * bloomScale));
       ctx.beginPath(); ctx.arc(hx, hy, CELL * 0.8, 0, Math.PI * 2); ctx.fill();
     }
     if (hasSecondSnake() && snake2.length) {
       const hx = snake2[0].x * CELL + CELL / 2, hy = snake2[0].y * CELL + CELL / 2;
-      ctx.fillStyle = withAlpha(getCss('--p2-head'), 0.45);
+      ctx.fillStyle = withAlpha(getCss('--p2-head'), Math.min(1, 0.45 * bloomScale));
       ctx.beginPath(); ctx.arc(hx, hy, CELL * 0.8, 0, Math.PI * 2); ctx.fill();
     }
     ctx.restore();
   }
 
+  function drawExtraFoods() {
+    extraFoods.forEach(f => {
+      const fx = f.x * CELL + CELL / 2, fy = f.y * CELL + CELL / 2;
+      const r = CELL / 2 - 5;
+      ctx.fillStyle = getCss('--gold');
+      ctx.beginPath(); ctx.arc(fx, fy, r, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.beginPath(); ctx.arc(fx - r * 0.3, fy - r * 0.3, r * 0.35, 0, Math.PI * 2); ctx.fill();
+    });
+  }
+
+  function drawNameTags() {
+    if (!hasSecondSnake()) return;
+    ctx.font = 'bold 10px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillStyle = getCss('--text');
+    if (snake.length) {
+      const p = snake[0];
+      ctx.fillText(settings.p1Name || 'P1', p.x * CELL + CELL / 2, p.y * CELL - 3);
+    }
+    if (snake2.length) {
+      const p = snake2[0];
+      ctx.fillText(settings.vsAI ? 'AI' : (settings.p2Name || 'P2'), p.x * CELL + CELL / 2, p.y * CELL - 3);
+    }
+  }
+
+  function drawUltraVignette() {
+    const cx = cssSize / 2, cy = cssSize / 2;
+    const g = ctx.createRadialGradient(cx, cy, cssSize * 0.35, cx, cy, cssSize * 0.72);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, 'rgba(0,0,0,0.45)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, cssSize, cssSize);
+  }
+
   function draw(alpha) {
     if (isUltra()) {
       const c = hexToRgb(getCss('--grid'));
-      ctx.fillStyle = `rgba(${c.r},${c.g},${c.b},0.32)`;
+      const trailAlpha = 0.5 - (settings.ultraTrailLength / 100) * 0.4;
+      ctx.fillStyle = `rgba(${c.r},${c.g},${c.b},${trailAlpha})`;
       ctx.fillRect(0, 0, cssSize, cssSize);
     } else {
       ctx.clearRect(0, 0, cssSize, cssSize);
@@ -1966,6 +2159,7 @@
     if (isUltra()) drawUltraShadows();
     drawObstacles();
     drawFood();
+    drawExtraFoods();
     if (settings.ghost && !isHumanTwoPlayer()) drawGhost();
     if (isUltra()) drawUltraBloom();
 
@@ -1974,9 +2168,11 @@
       const p2Colors = { head: getCss('--p2-head'), light: getCss('--p2-light'), dark: getCss('--p2-dark') };
       renderSnake(snake2, prevSnake2, dir2, dirQueue2[0] || dir2, p2Colors, alpha);
     }
+    drawNameTags();
 
     drawParticles();
     drawConfetti();
+    if (isUltra() && settings.ultraVignette) drawUltraVignette();
     ctx.restore();
   }
 
@@ -1998,20 +2194,37 @@
   }
 
   const AI_MOVES = [{ x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }];
-  function computeAIMove(bodyArr, curDir, otherBodyArr) {
-    let best = null, bestScore = -Infinity;
+  function computeAIMove(bodyArr, curDir, otherBodyArr, skill) {
+    skill = skill || 'smart';
+    const candidates = [];
     AI_MOVES.forEach(d => {
       if (d.x === -curDir.x && d.y === -curDir.y) return; // never reverse
       const nh = { x: bodyArr[0].x + d.x, y: bodyArr[0].y + d.y };
       wrapPosition(nh);
+      const lethal = checkDeath(bodyArr, nh) || otherBodyArr.some(s => sameCell(s, nh));
       let score;
-      if (checkDeath(bodyArr, nh) || otherBodyArr.some(s => sameCell(s, nh))) {
+      if (lethal) {
         score = -1000;
       } else {
         score = food ? -(Math.abs(nh.x - food.x) + Math.abs(nh.y - food.y)) : 0;
+        if (skill === 'ruthless') {
+          let openness = 0;
+          AI_MOVES.forEach(d2 => {
+            const nn = { x: nh.x + d2.x, y: nh.y + d2.y };
+            wrapPosition(nn);
+            if (!checkDeath(bodyArr, nn)) openness++;
+          });
+          score += openness * 0.5;
+        }
       }
-      if (score > bestScore) { bestScore = score; best = d; }
+      candidates.push({ d, score, lethal });
     });
+    if (skill === 'easy' && Math.random() < 0.35) {
+      const safe = candidates.filter(c => !c.lethal);
+      if (safe.length) return safe[Math.floor(Math.random() * safe.length)].d;
+    }
+    let best = null, bestScore = -Infinity;
+    candidates.forEach(c => { if (c.score > bestScore) { bestScore = c.score; best = c.d; } });
     return best || curDir;
   }
 
@@ -2063,6 +2276,7 @@
 
   function eatIfPossible(head, player) {
     if (!food || head.x !== food.x || head.y !== food.y) return { grow: false, extraShrink: 0 };
+    if (player === 1) lastEatTime = performance.now();
     const type = food.type;
     const info = FOOD_TYPES[type];
     const { frenzy } = effectsActive();
@@ -2117,7 +2331,7 @@
     let head2 = null, dead2 = false;
     const twoP = hasSecondSnake();
     if (twoP) {
-      if (settings.vsAI) dir2 = computeAIMove(snake2, dir2, snake);
+      if (settings.vsAI) dir2 = computeAIMove(snake2, dir2, snake, settings.aiSkill);
       else if (dirQueue2.length) dir2 = dirQueue2.shift();
       head2 = { x: snake2[0].x + dir2.x, y: snake2[0].y + dir2.y };
       wrapPosition(head2);
@@ -2138,9 +2352,11 @@
     if (!twoP) spawnTrailEffect(prevSnake[0].x, prevSnake[0].y);
     snake.unshift(head1);
     const ate1 = eatIfPossible(head1, 1);
-    if (!ate1.grow) snake.pop();
+    const ateExtra1 = !ate1.grow ? checkExtraFoodEat(head1, 1) : { grow: false };
+    if (!ate1.grow && !ateExtra1.grow) snake.pop();
     for (let i = 0; i < ate1.extraShrink; i++) if (snake.length > 3) snake.pop();
     if (!attractMode) stats.longestSnake = Math.max(stats.longestSnake, snake.length);
+    maintainSwarmFood();
 
     if (boosting && snake.length > 3) {
       boostTicks++;
@@ -2201,6 +2417,7 @@
       zen: 'Relax — no walls, no death. Press ⏹ to stop.',
       time: '60 seconds. Score as much as you can!',
       daily: "Today's board — same for every attempt today.",
+      weekly: "This week's board — same for every attempt this week.",
       boss: 'Hazards escalate fast — every level adds an extra, always-moving obstacle.',
     };
     overlayMsg.textContent = modeHint[settings.mode] || modeHint.classic;
@@ -2263,6 +2480,7 @@
     if (mode === 'time') return 'snake-highscores-time-v1';
     if (mode === 'zen') return 'snake-highscores-zen-v1';
     if (mode === 'daily') return 'snake-highscores-daily-' + dailySeed();
+    if (mode === 'weekly') return 'snake-highscores-weekly-' + weeklySeed();
     if (mode === 'boss') return 'snake-highscores-boss-v1';
     return SCORES_KEY;
   }
@@ -2290,7 +2508,7 @@
       'snake-highscores-zen-v1': 'Zen — Best Runs',
       'snake-highscores-boss-v1': 'Boss Challenge — Best Runs',
     };
-    scoresTitle.textContent = titles[key] || "Today's Attempts";
+    scoresTitle.textContent = titles[key] || (key.startsWith('snake-highscores-weekly-') ? "This Week's Attempts" : "Today's Attempts");
     const list = loadHighScores(key);
     scoresList.innerHTML = '';
     scoresEmpty.classList.toggle('hidden', list.length > 0);
@@ -2354,6 +2572,7 @@
     gameState = 'gameover';
     clearInterval(timer);
     clearInterval(timeInterval);
+    clearInterval(hungerInterval);
     zenStopBtn.classList.add('hidden');
     shakeUntil = performance.now() + 400;
     stopMusic();
@@ -2385,6 +2604,7 @@
     } else {
       if (settings.mode === 'zen') overlayTitle.textContent = 'Run Complete!';
       else if (reason === 'time') overlayTitle.textContent = "Time's Up!";
+      else if (reason === 'hunger') overlayTitle.textContent = 'Starved!';
       else overlayTitle.textContent = 'Game Over';
       overlayMsg.textContent = `Score: ${score} — Best: ${best}`;
       copyScoreBtn.dataset.text = `I scored ${score} points in Snake (${settings.mode}) 🐍🍎`;
@@ -2405,6 +2625,12 @@
       }
 
       maybeSaveGhost();
+
+      if (settings.mode === 'classic' && !attractMode) {
+        stats.scoreHistory.push(score);
+        stats.scoreHistory = stats.scoreHistory.slice(-20);
+        saveStats();
+      }
 
       if (settings.mode === 'time' && !attractMode && score > (bestSplits ? bestSplits.score : -1)) {
         localStorage.setItem(TIME_SPLITS_KEY, JSON.stringify({ score, splits: splitScores }));
@@ -2528,6 +2754,22 @@
           if (timeRemaining <= 0) { clearInterval(timeInterval); timeUp(); }
         }, 1000);
       }
+      if (settings.hungerMode && settings.mode !== 'zen') {
+        lastEatTime = performance.now();
+        clearInterval(hungerInterval);
+        hungerInterval = setInterval(() => {
+          if (gameState !== 'playing') return;
+          if (performance.now() - lastEatTime > HUNGER_TIMEOUT) {
+            lastEatTime = performance.now();
+            if (snake.length > 3) {
+              snake.pop();
+              showToast(levelToast, 'Hungry! 🍽');
+            } else {
+              gameOver(true, false, 'hunger');
+            }
+          }
+        }, 1000);
+      }
     });
   }
 
@@ -2587,13 +2829,23 @@
   optVibration.addEventListener('change', e => { settings.vibration = e.target.checked; saveSettings(); });
   optSoundTheme.addEventListener('change', e => { settings.soundTheme = e.target.value; saveSettings(); });
   optMusicTrack.addEventListener('change', e => { settings.musicTrack = e.target.value; saveSettings(); applyMusicTrack(); });
-  optSkin.addEventListener('change', e => { settings.skin = e.target.value; saveSettings(); });
+  optSkin.addEventListener('change', e => { settings.skin = e.target.value; saveSettings(); updateCustomColorUI(); });
   optAppleSkin.addEventListener('change', e => { settings.appleSkin = e.target.value; saveSettings(); });
   optTrail.addEventListener('change', e => { settings.trailEffect = e.target.value; saveSettings(); });
   optGhost.addEventListener('change', e => { settings.ghost = e.target.checked; saveSettings(); });
   optTheme.addEventListener('change', e => { settings.theme = e.target.value; saveSettings(); applyTheme(); });
   optColorblind.addEventListener('change', e => { settings.colorblind = e.target.checked; saveSettings(); applyColorblind(); });
   optReducedMotion.addEventListener('change', e => { settings.reducedMotion = e.target.checked; saveSettings(); });
+  optHunger.addEventListener('change', e => { settings.hungerMode = e.target.checked; saveSettings(); });
+  optSwarm.addEventListener('change', e => { settings.swarmMode = e.target.checked; saveSettings(); });
+  optAiSkill.addEventListener('change', e => { settings.aiSkill = e.target.value; saveSettings(); });
+  optP1Name.addEventListener('input', e => { settings.p1Name = e.target.value.slice(0, 12); saveSettings(); });
+  optP2Name.addEventListener('input', e => { settings.p2Name = e.target.value.slice(0, 12); saveSettings(); });
+  optCustomHead.addEventListener('input', e => { settings.customHead = e.target.value; saveSettings(); });
+  optCustomBody.addEventListener('input', e => { settings.customBody = e.target.value; saveSettings(); });
+  optUltraBloom.addEventListener('input', e => { settings.ultraBloom = Number(e.target.value); saveSettings(); });
+  optUltraTrail.addEventListener('input', e => { settings.ultraTrailLength = Number(e.target.value); saveSettings(); });
+  optUltraVignette.addEventListener('change', e => { settings.ultraVignette = e.target.checked; saveSettings(); });
 
   // ---------- controls (keybinding) modal ----------
   let awaitingRebind = null;
@@ -2659,6 +2911,38 @@
       ['Daily challenges played', stats.dailyPlays],
     ];
     statsGrid.innerHTML = rows.map(([label, val]) => `<div>${escapeHtml(label)}</div><span>${escapeHtml(String(val))}</span>`).join('');
+    drawStatsSparkline();
+  }
+
+  function drawStatsSparkline() {
+    const sctx = statsSparkline.getContext('2d');
+    const w = statsSparkline.width, h = statsSparkline.height;
+    sctx.clearRect(0, 0, w, h);
+    const data = stats.scoreHistory;
+    if (data.length < 2) {
+      sctx.fillStyle = getCss('--text-dim');
+      sctx.font = '11px system-ui, sans-serif';
+      sctx.textAlign = 'center';
+      sctx.fillText('Play a few Classic runs to see a trend here.', w / 2, h / 2 + 4);
+      return;
+    }
+    const max = Math.max(1, ...data);
+    const stepX = w / (data.length - 1);
+    sctx.strokeStyle = getCss('--accent');
+    sctx.lineWidth = 2;
+    sctx.beginPath();
+    data.forEach((v, i) => {
+      const x = i * stepX;
+      const y = h - 6 - (v / max) * (h - 12);
+      if (i === 0) sctx.moveTo(x, y); else sctx.lineTo(x, y);
+    });
+    sctx.stroke();
+    sctx.fillStyle = getCss('--accent');
+    data.forEach((v, i) => {
+      const x = i * stepX;
+      const y = h - 6 - (v / max) * (h - 12);
+      sctx.beginPath(); sctx.arc(x, y, 2, 0, Math.PI * 2); sctx.fill();
+    });
   }
   openStatsBtn.addEventListener('click', () => { renderStats(); statsModal.classList.remove('hidden'); });
   statsClose.addEventListener('click', () => statsModal.classList.add('hidden'));
