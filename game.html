@@ -310,6 +310,20 @@
     gap: 8px;
     justify-content: center;
   }
+  #overlay-settings-btn {
+    flex-basis: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6 55%, #ec4899);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35), 0 0 0 1px rgba(255,255,255,0.1) inset;
+  }
+  #overlay-settings-btn:hover {
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5), 0 0 0 1px rgba(255,255,255,0.16) inset;
+  }
+  #overlay-settings-btn svg { flex-shrink: 0; display: block; }
   .hidden { display: none !important; }
   button {
     background: var(--accent);
@@ -609,6 +623,23 @@
       </div>
       <div id="overlay-actions">
         <button id="start-btn">Start Game</button>
+        <button id="overlay-settings-btn" title="Settings">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6">
+            <circle cx="12" cy="12" r="3.2"/>
+            <circle cx="12" cy="12" r="7"/>
+            <g fill="currentColor" stroke="none">
+              <rect x="10.6" y="3.3" width="2.8" height="3.2" rx="0.6" transform="rotate(0 12 12)"/>
+              <rect x="10.6" y="3.3" width="2.8" height="3.2" rx="0.6" transform="rotate(45 12 12)"/>
+              <rect x="10.6" y="3.3" width="2.8" height="3.2" rx="0.6" transform="rotate(90 12 12)"/>
+              <rect x="10.6" y="3.3" width="2.8" height="3.2" rx="0.6" transform="rotate(135 12 12)"/>
+              <rect x="10.6" y="3.3" width="2.8" height="3.2" rx="0.6" transform="rotate(180 12 12)"/>
+              <rect x="10.6" y="3.3" width="2.8" height="3.2" rx="0.6" transform="rotate(225 12 12)"/>
+              <rect x="10.6" y="3.3" width="2.8" height="3.2" rx="0.6" transform="rotate(270 12 12)"/>
+              <rect x="10.6" y="3.3" width="2.8" height="3.2" rx="0.6" transform="rotate(315 12 12)"/>
+            </g>
+          </svg>
+          Settings
+        </button>
         <button id="view-scores-btn" class="secondary">High Scores</button>
         <button id="copy-score-btn" class="secondary hidden">Copy Score</button>
         <button id="copy-link-btn" class="secondary hidden">Copy Challenge Link</button>
@@ -3644,6 +3675,7 @@
   scoresClose.addEventListener('click', () => scoresModal.classList.add('hidden'));
 
   settingsBtn.addEventListener('click', () => { populateSettingsUI(); settingsModal.classList.remove('hidden'); });
+  document.getElementById('overlay-settings-btn').addEventListener('click', () => { populateSettingsUI(); settingsModal.classList.remove('hidden'); });
   settingsClose.addEventListener('click', () => settingsModal.classList.add('hidden'));
 
   optMode.addEventListener('change', e => {
