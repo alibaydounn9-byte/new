@@ -611,6 +611,9 @@
       <button class="tiny secondary" id="editor-ice-btn" title="Click cells to place slippery ice tiles">🧊 Ice</button>
       <button class="tiny" id="editor-save-btn">Save</button>
       <button class="tiny secondary" id="editor-clear-btn">Clear</button>
+      <button class="tiny secondary" id="editor-export-btn" title="Download this layout as a file">Export</button>
+      <button class="tiny secondary" id="editor-import-btn" title="Load a layout from a file">Import</button>
+      <input type="file" id="editor-import-input" accept="application/json" class="hidden">
       <button class="tiny secondary" id="editor-exit-btn">Exit Editor</button>
     </div>
     <div id="overlay">
@@ -644,6 +647,7 @@
         <button id="copy-score-btn" class="secondary hidden">Copy Score</button>
         <button id="copy-link-btn" class="secondary hidden">Copy Challenge Link</button>
         <button id="watch-replay-btn" class="secondary hidden">Watch Replay</button>
+        <button id="export-gif-btn" class="secondary hidden">Download GIF</button>
         <button id="scorecard-btn" class="secondary hidden">Share Scorecard</button>
       </div>
       <canvas id="qr-canvas" class="hidden" width="120" height="120"></canvas>
@@ -681,11 +685,18 @@
       <p class="modal-hint hidden" id="zen-hint">Zen always wraps around edges and has no obstacles or death — press ⏹ to end your run.</p>
       <p class="modal-hint hidden" id="daily-hint">Daily Challenge always uses Medium grid, Normal difficulty, no wrap — same board all day.</p>
       <p class="modal-hint hidden" id="weekly-hint">Weekly Challenge always uses Medium grid, Normal difficulty, no wrap — same board all week.</p>
-      <p class="modal-hint hidden" id="boss-hint">Boss Challenge: hazards escalate fast — every level adds an extra, always-moving obstacle.</p>
-      <p class="modal-hint hidden" id="sandbox-hint">Sandbox: no death, no obstacles ever spawn. Press 1-6 to spawn a specific apple type on demand.</p>
+      <p class="modal-hint hidden" id="boss-hint">Boss Challenge: hazards escalate fast, and every 3 levels a Boss with a health bar appears — eating apples damages it; defeat it for a +10 bonus.</p>
+      <p class="modal-hint hidden" id="sandbox-hint">Sandbox: no death, no obstacles ever spawn. Press 1-8 to spawn a specific apple type on demand.</p>
       <p class="modal-hint hidden" id="speedrun-hint">Speedrun: race to score 20 as fast as possible — the clock counts up.</p>
       <label class="row"><input type="checkbox" id="opt-hunger"> Hunger mode (shrink if you don't eat in time)</label>
       <label class="row"><input type="checkbox" id="opt-swarm"> Multiple apples (swarm)</label>
+      <label>Weather
+        <select id="opt-weather">
+          <option value="none">None</option>
+          <option value="wind">Windy (gusts blow the apple around)</option>
+          <option value="fog">Foggy (limited visibility around your head)</option>
+        </select>
+      </label>
 
       <label>Grid size
         <select id="opt-grid">
@@ -797,10 +808,12 @@
       <div class="link-row">
         <button class="secondary tiny" id="open-controls-btn">Controls</button>
         <button class="secondary tiny" id="open-achv-btn">Achievements</button>
+        <button class="secondary tiny" id="open-quests-btn">Quests <span id="quest-badge"></span></button>
         <button class="secondary tiny" id="open-stats-btn">Stats</button>
         <button class="secondary tiny" id="open-editor-btn">Level Editor</button>
         <button class="secondary tiny" id="open-graphics-btn">Graphics</button>
         <button class="secondary tiny" id="open-shop-btn">Shop 🪙<span id="coin-balance">0</span></button>
+        <button class="secondary tiny" id="open-worldmap-btn">World Map</button>
         <button class="secondary tiny" id="open-credits-btn">Credits</button>
       </div>
 
@@ -869,12 +882,36 @@
     </div>
   </div>
 
+  <div id="worldmap-modal" class="modal hidden">
+    <div class="modal-card">
+      <h2>World Map</h2>
+      <p class="modal-hint">Reach higher levels in any run to unlock new stage backgrounds for the board.</p>
+      <ul id="worldmap-list"></ul>
+      <div class="modal-actions">
+        <button id="worldmap-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="quests-modal" class="modal hidden">
+    <div class="modal-card">
+      <h2>Daily Quests</h2>
+      <p class="modal-hint">Three quests are picked for everyone each day. Complete them for coins — new ones arrive tomorrow.</p>
+      <ul id="quests-list"></ul>
+      <div class="modal-actions">
+        <button id="quests-close">Close</button>
+      </div>
+    </div>
+  </div>
+
   <div id="stats-modal" class="modal hidden">
     <div class="modal-card">
       <h2>Stats</h2>
       <div class="stats-grid" id="stats-grid"></div>
       <p class="section-title">Recent scores (Classic)</p>
       <canvas id="stats-sparkline" width="300" height="60" style="width:100%;height:60px;"></canvas>
+      <p class="section-title">Where you die</p>
+      <canvas id="death-heatmap" width="150" height="150" style="width:100%;max-width:220px;height:auto;image-rendering:pixelated;"></canvas>
       <div class="modal-actions">
         <button id="stats-close">Close</button>
       </div>
@@ -939,7 +976,7 @@
     <div class="modal-card">
       <h2>How to Play</h2>
       <p class="modal-hint">Use arrow keys or WASD to steer. Eat apples to grow — watch out for walls, obstacles, and your own tail.</p>
-      <p class="modal-hint">Special apples do different things: ⭐ bonus points, ⚡ speed frenzy, ❄ slow-mo, ✂ shrinks your tail, 🔨 destroys an obstacle.</p>
+      <p class="modal-hint">Special apples do different things: ⭐ bonus points, ⚡ speed frenzy, ❄ slow-mo, ✂ shrinks your tail, 🔨 destroys an obstacle, 🧲 magnet pulls food toward you, 🛡 shield absorbs your next crash.</p>
       <p class="modal-hint">Hold Shift (or the ⚡ button on mobile) to boost — it costs a bit of length. Space pauses the game.</p>
       <p class="modal-hint">Check ⚙️ Settings for game modes, difficulty, two-player, an AI opponent, graphics options, and more.</p>
       <p class="modal-hint">Two-player extras: Q / (forward slash) whips your tail to stun the other snake if it's close behind you. Ctrl+1-4 (P1) or Alt+1-4 (P2) sends a taunt.</p>
@@ -1009,6 +1046,8 @@
     slow:   { glyph: '❄', ring: '#38bdf8', points: 1 },
     shrink: { glyph: '✂', ring: '#a855f7', points: 1 },
     hammer: { glyph: '🔨', ring: '#a3a3a3', points: 1 },
+    magnet: { glyph: '🧲', ring: '#c084fc', points: 1 },
+    shield: { glyph: '🛡', ring: '#22d3ee', points: 1 },
   };
   const SKINS = {
     classic: { name: 'Classic', unlock: null },
@@ -1055,6 +1094,8 @@
     { id: 'century-gold',   name: 'Century Snake III', desc: 'Grow a snake to 50 segments.', tier: 'gold',  check: s => s.longestSnake >= 50, progress: s => [s.longestSnake, 50] },
     { id: 'streak-silver', name: 'Regular', desc: 'Play on 3 days in a row.', tier: 'silver', check: s => s.loginStreak >= 3, progress: s => [s.loginStreak, 3] },
     { id: 'streak-gold', name: 'Dedicated', desc: 'Play on 7 days in a row.', tier: 'gold', check: s => s.loginStreak >= 7, progress: s => [s.loginStreak, 7] },
+    { id: 'boss-slayer', name: 'Boss Slayer', desc: 'Defeat a Boss in Boss Challenge.', check: s => s.bossesDefeated >= 1, progress: s => [s.bossesDefeated, 1] },
+    { id: 'quest-regular', name: 'Quest Regular', desc: 'Complete 10 daily quests in total.', tier: 'silver', check: s => s.questsCompletedTotal >= 10, progress: s => [s.questsCompletedTotal, 10] },
   ];
   const SHOP_ITEMS = [
     { type: 'skin', id: 'ocean', name: 'Ocean Skin', price: 30 },
@@ -1064,6 +1105,28 @@
     { type: 'appleskin', id: 'citrus', name: 'Citrus Apple', price: 20 },
     { type: 'trail', id: 'fire', name: 'Fire Trail', price: 40 },
     { type: 'trail', id: 'ice', name: 'Ice Trail', price: 40 },
+  ];
+  const QUEST_POOL = [
+    { id: 'apples10', desc: 'Eat 10 apples today', target: 10, metric: 'apples' },
+    { id: 'apples25', desc: 'Eat 25 apples today', target: 25, metric: 'apples' },
+    { id: 'score15', desc: 'Score 15+ in a single run', target: 15, metric: 'scoreMax' },
+    { id: 'score25', desc: 'Score 25+ in a single run', target: 25, metric: 'scoreMax' },
+    { id: 'survive60', desc: 'Survive 60 seconds in a single run', target: 60, metric: 'surviveMax' },
+    { id: 'golden1', desc: 'Eat a golden apple today', target: 1, metric: 'golden' },
+    { id: 'combo4', desc: 'Reach a x4 combo today', target: 4, metric: 'comboMax' },
+    { id: 'games3', desc: 'Play 3 games today', target: 3, metric: 'games' },
+    { id: 'level5', desc: 'Reach level 5 in a single run', target: 5, metric: 'levelMax' },
+    { id: 'shield1', desc: 'Use a shield to survive a crash', target: 1, metric: 'shieldSave' },
+    { id: 'magnet1', desc: 'Eat a magnet apple today', target: 1, metric: 'magnetApple' },
+    { id: 'hammer1', desc: 'Destroy an obstacle with a hammer apple', target: 1, metric: 'hammerApple' },
+  ];
+  const QUEST_REWARD_COINS = 10;
+  const WORLD_STAGES = [
+    { id: 'grasslands', name: 'Grasslands', unlockLevel: 1, bg: 'linear-gradient(135deg, #d9f2c4, #a8dd88)' },
+    { id: 'desert', name: 'Desert Dunes', unlockLevel: 5, bg: 'linear-gradient(135deg, #fde7b8, #e8b975)' },
+    { id: 'tundra', name: 'Frozen Tundra', unlockLevel: 10, bg: 'linear-gradient(135deg, #e3f2fd, #a8d8ef)' },
+    { id: 'volcano', name: 'Volcano', unlockLevel: 15, bg: 'linear-gradient(135deg, #3b0d0d, #8a2c1d)' },
+    { id: 'space', name: 'Deep Space', unlockLevel: 20, bg: 'radial-gradient(circle at 30% 20%, #241b52, #05040a 70%)' },
   ];
   const DEFAULT_KEYMAP = {
     p1: { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' },
@@ -1157,6 +1220,7 @@
   const copyLinkBtn = document.getElementById('copy-link-btn');
   const qrCanvas = document.getElementById('qr-canvas');
   const watchReplayBtn = document.getElementById('watch-replay-btn');
+  const exportGifBtn = document.getElementById('export-gif-btn');
   const scorecardBtn = document.getElementById('scorecard-btn');
   const challengeBanner = document.getElementById('challenge-banner');
   const muteBtn = document.getElementById('mute-btn');
@@ -1184,6 +1248,7 @@
   const timeSplitEl = document.getElementById('time-split');
   const optHunger = document.getElementById('opt-hunger');
   const optSwarm = document.getElementById('opt-swarm');
+  const optWeather = document.getElementById('opt-weather');
   const optAiSkill = document.getElementById('opt-aiskill');
   const optP1Name = document.getElementById('opt-p1name');
   const optP2Name = document.getElementById('opt-p2name');
@@ -1193,6 +1258,7 @@
   const comboMeter = document.getElementById('combo-meter');
   const comboMeterFill = document.getElementById('combo-meter-fill');
   const statsSparkline = document.getElementById('stats-sparkline');
+  const deathHeatmap = document.getElementById('death-heatmap');
   const ultraSettings = document.getElementById('ultra-settings');
   const optUltraBloom = document.getElementById('opt-ultrabloom');
   const optUltraTrail = document.getElementById('opt-ultratrail');
@@ -1241,6 +1307,15 @@
 
   const openControlsBtn = document.getElementById('open-controls-btn');
   const openAchvBtn = document.getElementById('open-achv-btn');
+  const openQuestsBtn = document.getElementById('open-quests-btn');
+  const questBadge = document.getElementById('quest-badge');
+  const questsModal = document.getElementById('quests-modal');
+  const questsList = document.getElementById('quests-list');
+  const questsClose = document.getElementById('quests-close');
+  const openWorldmapBtn = document.getElementById('open-worldmap-btn');
+  const worldmapModal = document.getElementById('worldmap-modal');
+  const worldmapList = document.getElementById('worldmap-list');
+  const worldmapClose = document.getElementById('worldmap-close');
   const openStatsBtn = document.getElementById('open-stats-btn');
   const openEditorBtn = document.getElementById('open-editor-btn');
   const openGraphicsBtn = document.getElementById('open-graphics-btn');
@@ -1292,6 +1367,7 @@
       highContrast: false, dyslexiaFont: false, dashEnabled: true, minimapEnabled: true,
       achvVolume: 0.6, seasonalSkins: false, showFps: false, splitScreen: false,
       customDifficulty: { start: 150, floor: 80, step: 3 },
+      weather: 'none', worldTheme: 'none',
     },
     safeParse(localStorage.getItem(SETTINGS_KEY))
   );
@@ -1302,13 +1378,16 @@
   let stats = Object.assign({
     gamesPlayed: 0, applesEaten: 0, longestSnake: 3, p1Wins: 0, p2Wins: 0, ties: 0,
     goldenEaten: 0, speedEaten: 0, comboMax: 0, dailyPlays: 0, hardBest: 0, insaneBest: 0, maxLevel: 1,
-    aiWins: 0, aiLosses: 0,
-    unlocked: [], scoreHistory: [],
+    aiWins: 0, aiLosses: 0, bossesDefeated: 0,
+    unlocked: [], scoreHistory: [], deaths: [],
     loginStreak: 0, lastPlayedDate: '', coins: 0, purchased: [],
+    questProgress: { date: '', ids: [], metrics: {}, completed: {} }, questsCompletedTotal: 0,
   }, safeParse(localStorage.getItem(STATS_KEY)));
   if (!Array.isArray(stats.unlocked)) stats.unlocked = [];
   if (!Array.isArray(stats.scoreHistory)) stats.scoreHistory = [];
   if (!Array.isArray(stats.purchased)) stats.purchased = [];
+  if (!Array.isArray(stats.deaths)) stats.deaths = [];
+  if (!stats.questProgress || typeof stats.questProgress !== 'object') stats.questProgress = { date: '', ids: [], metrics: {}, completed: {} };
   function saveStats() { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); }
 
   function isSkinUnlocked(id) {
@@ -1378,6 +1457,55 @@
     stats.lastPlayedDate = today;
     saveStats();
     checkAchievements();
+  }
+
+  // ---------- daily quests ----------
+  function questById(id) { return QUEST_POOL.find(q => q.id === id); }
+  function ensureDailyQuests() {
+    const today = new Date().toISOString().slice(0, 10);
+    if (stats.questProgress.date === today) return;
+    const seed = today.split('-').reduce((a, n) => a * 400 + Number(n), 0) + 90210;
+    const r = mulberry32(seed);
+    const pool = QUEST_POOL.slice();
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(r() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    stats.questProgress = { date: today, ids: pool.slice(0, 3).map(q => q.id), metrics: {}, completed: {} };
+    saveStats();
+  }
+  function checkQuestCompletion() {
+    const qp = stats.questProgress;
+    let changed = false;
+    qp.ids.forEach(id => {
+      if (qp.completed[id]) return;
+      const q = questById(id);
+      if (!q) return;
+      const cur = qp.metrics[q.metric] || 0;
+      if (cur >= q.target) {
+        qp.completed[id] = true;
+        stats.coins += QUEST_REWARD_COINS;
+        stats.questsCompletedTotal = (stats.questsCompletedTotal || 0) + 1;
+        changed = true;
+        showToast(levelToast, `Quest complete: ${q.desc} (+${QUEST_REWARD_COINS} 🪙)`);
+      }
+    });
+    saveStats();
+    if (changed) { updateCoinDisplays(); checkAchievements(); updateQuestBadge(); }
+  }
+  function bumpQuestMetric(metric, amount) {
+    if (attractMode) return;
+    ensureDailyQuests();
+    const qp = stats.questProgress;
+    qp.metrics[metric] = (qp.metrics[metric] || 0) + amount;
+    checkQuestCompletion();
+  }
+  function setQuestMetricMax(metric, value) {
+    if (attractMode) return;
+    ensureDailyQuests();
+    const qp = stats.questProgress;
+    qp.metrics[metric] = Math.max(qp.metrics[metric] || 0, value);
+    checkQuestCompletion();
   }
 
   function applyTheme() {
@@ -1550,6 +1678,7 @@
     optP2Name.value = settings.p2Name;
     optHunger.checked = settings.hungerMode;
     optSwarm.checked = settings.swarmMode;
+    optWeather.value = settings.weather;
     optTheme.value = settings.theme;
     optColorblind.checked = settings.colorblind;
     optReducedMotion.checked = settings.reducedMotion;
@@ -1700,8 +1829,11 @@
   let snake2, prevSnake2, dir2, dirQueue2, score2;
   let food, obstacles, level, speedMs, timer;
   let lastStepTime = 0, lastFrameTime = performance.now();
-  let frenzyUntil = 0, slomoUntil = 0, shakeUntil = 0;
+  let frenzyUntil = 0, slomoUntil = 0, shakeUntil = 0, magnetUntil = 0;
   let wasFrenzy = false, wasSlomo = false;
+  let shieldActive1 = false, shieldActive2 = false;
+  let lastWindGust = 0, windGustUntil = 0, windGustDir = { x: 0, y: 0 };
+  let runStartTime = 0;
   let particles = [];
   let combo = { 1: { count: 0, last: 0 }, 2: { count: 0, last: 0 } };
   const COMBO_WINDOW = 3000;
@@ -1775,8 +1907,14 @@
     obstacles = loadCustomLayout() || [];
     frenzyUntil = 0;
     slomoUntil = 0;
+    magnetUntil = 0;
     wasFrenzy = false;
     wasSlomo = false;
+    wasMagnet = false;
+    shieldActive1 = false;
+    shieldActive2 = false;
+    windGustUntil = 0;
+    lastWindGust = performance.now();
     particles = [];
     combo = { 1: { count: 0, last: 0 }, 2: { count: 0, last: 0 } };
     speedMs = currentDifficulty().start;
@@ -1859,7 +1997,7 @@
     food = { x: pos.x, y: pos.y, type, expiresAt: type === 'golden' ? performance.now() + 6000 : null };
   }
 
-  const SANDBOX_FOOD_ORDER = ['normal', 'golden', 'speed', 'slow', 'shrink', 'hammer'];
+  const SANDBOX_FOOD_ORDER = ['normal', 'golden', 'speed', 'slow', 'shrink', 'hammer', 'magnet', 'shield'];
   function spawnSandboxFood(n) {
     const type = SANDBOX_FOOD_ORDER[n - 1];
     if (!type) return;
@@ -1879,6 +2017,8 @@
     if (r < 0.15) return 'slow';
     if (r < 0.20) return 'shrink';
     if (r < 0.25 && obstacles.length > 0) return 'hammer';
+    if (r < 0.30) return 'magnet';
+    if (r < 0.35) return 'shield';
     return 'normal';
   }
 
@@ -1907,6 +2047,31 @@
     obstacles.push(pos);
   }
 
+  function spawnBoss(hp) {
+    obstacles = obstacles.filter(o => !o.isBoss);
+    const occ = occupiedCells();
+    const heads = [snake[0], snake2[0]].filter(Boolean);
+    let pos, tries = 0;
+    do {
+      pos = { x: Math.floor(rand() * cols), y: Math.floor(rand() * rows) };
+      tries++;
+    } while (
+      tries < 200 &&
+      (occ.some(s => s.x === pos.x && s.y === pos.y) ||
+        heads.some(h => Math.abs(h.x - pos.x) + Math.abs(h.y - pos.y) < 4))
+    );
+    if (tries >= 200) return;
+    const dirs = [{ x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }];
+    const d = dirs[Math.floor(rand() * dirs.length)];
+    pos.isBoss = true;
+    pos.hp = hp;
+    pos.maxHp = hp;
+    pos.moving = true;
+    pos.vx = d.x;
+    pos.vy = d.y;
+    obstacles.push(pos);
+  }
+
   function maybeLevelUp() {
     const leading = (hasSecondSnake()) ? Math.max(score, score2) : score;
     const newLevel = Math.floor(leading / 5) + 1;
@@ -1914,13 +2079,23 @@
       level = newLevel;
       levelEl.textContent = level;
       addObstacle();
-      if (settings.mode === 'boss') addObstacle(true);
-      showToast(levelToast, settings.mode === 'boss' ? `Boss Level ${level}!` : `Level ${level}!`);
+      if (settings.mode === 'boss') {
+        addObstacle(true);
+        if (level % 3 === 0) {
+          spawnBoss(3 + Math.floor(level / 3) * 2);
+          showToast(levelToast, `Boss Level ${level}! A Boss appears!`);
+        } else {
+          showToast(levelToast, `Boss Level ${level}!`);
+        }
+      } else {
+        showToast(levelToast, `Level ${level}!`);
+      }
       sfx.levelUp();
       if (!attractMode) {
         stats.maxLevel = Math.max(stats.maxLevel, level);
         saveStats();
         checkAchievements();
+        setQuestMetricMax('levelMax', level);
       }
     }
   }
@@ -2030,7 +2205,7 @@
   // ---------- effects (frenzy / slow-mo / combo) ----------
   function effectsActive() {
     const now = performance.now();
-    return { frenzy: now < frenzyUntil, slomo: now < slomoUntil };
+    return { frenzy: now < frenzyUntil, slomo: now < slomoUntil, magnet: now < magnetUntil };
   }
   function effectiveSpeed() {
     const { frenzy, slomo } = effectsActive();
@@ -2090,7 +2265,7 @@
     vibrate(15);
   }
   function checkEffectTimers() {
-    const { frenzy, slomo } = effectsActive();
+    const { frenzy, slomo, magnet } = effectsActive();
     if (frenzy !== wasFrenzy || slomo !== wasSlomo) {
       wasFrenzy = frenzy; wasSlomo = slomo;
       if (gameState === 'playing') restartTimer();
@@ -2102,6 +2277,9 @@
     effectBadges.innerHTML = '';
     if (frenzy) effectBadges.innerHTML += '<span class="badge">⚡ Frenzy</span>';
     if (slomo) effectBadges.innerHTML += '<span class="badge">❄ Slow-mo</span>';
+    if (magnet) effectBadges.innerHTML += '<span class="badge">🧲 Magnet</span>';
+    if (shieldActive1) effectBadges.innerHTML += `<span class="badge">🛡 ${hasSecondSnake() ? 'P1 ' : ''}Shield</span>`;
+    if (shieldActive2) effectBadges.innerHTML += '<span class="badge">🛡 P2 Shield</span>';
     if (combo[1].count >= 2) effectBadges.innerHTML += `<span class="badge">🔥 P1 x${Math.min(5, combo[1].count)}</span>`;
     if (settings.twoPlayer && combo[2].count >= 2) effectBadges.innerHTML += `<span class="badge">🔥 P2 x${Math.min(5, combo[2].count)}</span>`;
 
@@ -2139,6 +2317,26 @@
 
   function drawObstacles() {
     obstacles.forEach(o => {
+      if (o.isBoss) {
+        const cx = o.x * CELL + CELL / 2, cy = o.y * CELL + CELL / 2;
+        const pulse = settings.reducedMotion ? 0 : Math.sin(performance.now() / 200) * 1.5;
+        const r = CELL / 2 - 1 + pulse;
+        const g = ctx.createRadialGradient(cx, cy, 1, cx, cy, r);
+        g.addColorStop(0, '#f87171');
+        g.addColorStop(1, '#7f1d1d');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#fecaca';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+        const barW = CELL - 4, barH = 4;
+        const bx = o.x * CELL + 2, by = o.y * CELL - 7;
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.fillRect(bx, by, barW, barH);
+        ctx.fillStyle = o.hp / o.maxHp > 0.4 ? '#4ade80' : '#ef4444';
+        ctx.fillRect(bx, by, barW * Math.max(0, o.hp / o.maxHp), barH);
+        return;
+      }
       if (o.type === 'ice') {
         const x = o.x * CELL + 1, y = o.y * CELL + 1, w = CELL - 2, h = CELL - 2;
         const g = ctx.createLinearGradient(x, y, x + w, y + h);
@@ -2568,6 +2766,43 @@
 
     drawParticles();
     drawConfetti();
+    if (settings.weather === 'wind') drawWindGust();
+  }
+
+  function drawFogOverlay(alpha) {
+    if (!snake || !snake.length || !prevSnake || !prevSnake.length) return;
+    const hx = lerp(prevSnake[0].x, snake[0].x, alpha) * CELL + CELL / 2;
+    const hy = lerp(prevSnake[0].y, snake[0].y, alpha) * CELL + CELL / 2;
+    const radius = CELL * 4.2;
+    ctx.save();
+    const g = ctx.createRadialGradient(hx, hy, radius * 0.25, hx, hy, radius);
+    g.addColorStop(0, 'rgba(4,6,12,0)');
+    g.addColorStop(1, 'rgba(4,6,12,0.94)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, cssSize, cssSize);
+    ctx.restore();
+  }
+
+  function drawWindGust() {
+    if (performance.now() >= windGustUntil) return;
+    ctx.save();
+    ctx.globalAlpha = 0.45;
+    ctx.strokeStyle = '#93c5fd';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    const cx = cssSize / 2, cy = cssSize / 2;
+    for (let i = -1; i <= 1; i++) {
+      const offset = i * 44;
+      const sx = cx - windGustDir.x * 70 + (windGustDir.y ? offset : 0);
+      const sy = cy - windGustDir.y * 70 + (windGustDir.x ? offset : 0);
+      const ex = sx + windGustDir.x * 46;
+      const ey = sy + windGustDir.y * 46;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   function drawSplitScreen(alpha) {
@@ -2607,6 +2842,7 @@
       drawSplitScreen(alpha);
     } else {
       drawWorldContents(alpha);
+      if (settings.weather === 'fog') drawFogOverlay(alpha);
     }
 
     if (isUltra() && settings.ultraVignette) drawUltraVignette();
@@ -2690,6 +2926,44 @@
     });
   }
 
+  function updateWeather() {
+    if (settings.weather !== 'wind' || !food) return;
+    const now = performance.now();
+    if (now - lastWindGust < 4000) return;
+    lastWindGust = now;
+    const dirs = [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }];
+    const d = dirs[Math.floor(rand() * dirs.length)];
+    windGustDir = d;
+    windGustUntil = now + 1200;
+    const nx = food.x + d.x, ny = food.y + d.y;
+    const inBounds = nx >= 0 && nx < cols && ny >= 0 && ny < rows;
+    const blocked = !inBounds ||
+      obstacles.some(o => o.x === nx && o.y === ny && o.type !== 'portal' && o.type !== 'ice') ||
+      snake.some(s => s.x === nx && s.y === ny) ||
+      (hasSecondSnake() && snake2.some(s => s.x === nx && s.y === ny));
+    if (!blocked) { food.x = nx; food.y = ny; }
+  }
+
+  function updateFoodMagnet() {
+    if (!food || !effectsActive().magnet) return;
+    const heads = [snake[0], hasSecondSnake() ? snake2[0] : null].filter(Boolean);
+    if (!heads.length) return;
+    let nearest = heads[0], bestDist = Math.abs(heads[0].x - food.x) + Math.abs(heads[0].y - food.y);
+    heads.slice(1).forEach(h => {
+      const d = Math.abs(h.x - food.x) + Math.abs(h.y - food.y);
+      if (d < bestDist) { bestDist = d; nearest = h; }
+    });
+    if (bestDist === 0 || bestDist > 8) return;
+    const dx = Math.sign(nearest.x - food.x), dy = Math.sign(nearest.y - food.y);
+    let nx = food.x, ny = food.y;
+    if (dx !== 0 && dy !== 0) { if (rand() < 0.5) nx += dx; else ny += dy; }
+    else { nx += dx; ny += dy; }
+    const blocked = obstacles.some(o => o.x === nx && o.y === ny && o.type !== 'portal' && o.type !== 'ice') ||
+      snake.some(s => s.x === nx && s.y === ny) ||
+      (hasSecondSnake() && snake2.some(s => s.x === nx && s.y === ny));
+    if (!blocked) { food.x = nx; food.y = ny; }
+  }
+
   function addScore(player, amount) {
     if (player === 1) {
       score += amount;
@@ -2700,6 +2974,7 @@
         localStorage.setItem(BEST_KEY, best);
         if (!beatBestThisRun) { beatBestThisRun = true; spawnConfetti(); }
       }
+      setQuestMetricMax('scoreMax', score);
     } else {
       score2 += amount;
       score2El.textContent = score2;
@@ -2749,17 +3024,50 @@
       saveStats();
       checkAchievements();
       updateCoinDisplays();
+      if (player === 1) {
+        bumpQuestMetric('apples', 1);
+        setQuestMetricMax('comboMax', c.count);
+        if (type === 'golden') bumpQuestMetric('golden', 1);
+        if (type === 'magnet') bumpQuestMetric('magnetApple', 1);
+      }
     }
 
     if (type === 'speed') frenzyUntil = now + 5000;
     if (type === 'slow') slomoUntil = now + 5000;
+    if (type === 'magnet') magnetUntil = now + 6000;
+    if (type === 'shield') {
+      if (player === 1) shieldActive1 = true; else shieldActive2 = true;
+      showToast(levelToast, (hasSecondSnake() ? (player === 1 ? 'P1 ' : 'P2 ') : '') + 'Shield ready! 🛡');
+    }
     if (type === 'hammer' && obstacles.length > 0) {
-      obstacles.splice(Math.floor(rand() * obstacles.length), 1);
+      const targets = obstacles.filter(o => !o.isBoss);
+      if (targets.length) {
+        obstacles.splice(obstacles.indexOf(targets[Math.floor(rand() * targets.length)]), 1);
+        if (!attractMode && player === 1) bumpQuestMetric('hammerApple', 1);
+      }
     }
     let extraShrink = 0;
     if (type === 'shrink') {
       const arr = player === 1 ? snake : snake2;
       extraShrink = Math.max(0, Math.min(2, arr.length - 3));
+    }
+    if (settings.mode === 'boss') {
+      const boss = obstacles.find(o => o.isBoss);
+      if (boss) {
+        boss.hp--;
+        if (boss.hp <= 0) {
+          obstacles = obstacles.filter(o => o !== boss);
+          addScore(player, 10);
+          spawnConfetti();
+          sfx.levelUp();
+          showToast(levelToast, 'Boss Defeated! +10');
+          if (!attractMode) {
+            stats.bossesDefeated = (stats.bossesDefeated || 0) + 1;
+            saveStats();
+            checkAchievements();
+          }
+        }
+      }
     }
     placeFood();
     return { grow: type !== 'shrink', extraShrink };
@@ -2769,6 +3077,8 @@
     if (gameState !== 'playing') return;
 
     updateObstacles();
+    updateFoodMagnet();
+    updateWeather();
 
     const now0 = performance.now();
     const stunned1 = now0 < stun1Until;
@@ -2797,6 +3107,22 @@
       if (!dead2 && snake.some(s => sameCell(s, head2))) dead2 = true;
     }
 
+    let shieldSaved1 = false, shieldSaved2 = false;
+    if (dead1 && shieldActive1) {
+      dead1 = false; shieldActive1 = false; shieldSaved1 = true;
+      spawnParticles(snake[0].x, snake[0].y, '#22d3ee');
+      showToast(levelToast, (hasSecondSnake() ? 'P1 ' : '') + 'Shield absorbed a hit! 🛡');
+      sfx.levelUp();
+      vibrate([30, 20, 30]);
+      bumpQuestMetric('shieldSave', 1);
+    }
+    if (dead2 && shieldActive2) {
+      dead2 = false; shieldActive2 = false; shieldSaved2 = true;
+      spawnParticles(snake2[0].x, snake2[0].y, '#22d3ee');
+      showToast(levelToast, 'P2 Shield absorbed a hit! 🛡');
+      sfx.levelUp();
+    }
+
     if (dead1 || dead2) {
       if (attractMode) { reset(); return; }
       gameOver(dead1, dead2, 'collision');
@@ -2804,7 +3130,7 @@
     }
 
     prevSnake = snake.map(s => ({ ...s }));
-    if (!stunned1) {
+    if (!stunned1 && !shieldSaved1) {
       if (!twoP) spawnTrailEffect(prevSnake[0].x, prevSnake[0].y);
       snake.unshift(head1);
       const lenBefore = snake.length;
@@ -2832,7 +3158,7 @@
 
     if (twoP) {
       prevSnake2 = snake2.map(s => ({ ...s }));
-      if (!stunned2) {
+      if (!stunned2 && !shieldSaved2) {
         snake2.unshift(head2);
         const ate2 = eatIfPossible(head2, 2);
         if (!ate2.grow) snake2.pop();
@@ -2928,8 +3254,8 @@
       time: '60 seconds. Score as much as you can!',
       daily: "Today's board — same for every attempt today.",
       weekly: "This week's board — same for every attempt this week.",
-      boss: 'Hazards escalate fast — every level adds an extra, always-moving obstacle.',
-      sandbox: 'No death, no obstacles. Press 1-6 to spawn apple types on demand.',
+      boss: 'Hazards escalate fast, and every 3 levels a Boss with a health bar appears — eating apples damages it.',
+      sandbox: 'No death, no obstacles. Press 1-8 to spawn apple types on demand.',
       speedrun: `Race to score ${SPEEDRUN_TARGET} as fast as you can!`,
     };
     overlayMsg.textContent = modeHint[settings.mode] || modeHint.classic;
@@ -3054,6 +3380,181 @@
 
   // ---------- replay ----------
   let replayReturnState = 'gameover';
+  // ---------- minimal from-scratch GIF89a encoder ----------
+  function buildGifPalette() {
+    const palette = [];
+    for (let r = 0; r < 6; r++) {
+      for (let g = 0; g < 6; g++) {
+        for (let b = 0; b < 6; b++) {
+          palette.push([Math.round(r * 255 / 5), Math.round(g * 255 / 5), Math.round(b * 255 / 5)]);
+        }
+      }
+    }
+    while (palette.length < 256) palette.push([0, 0, 0]);
+    return palette;
+  }
+  function quantizeGifIndex(r, g, b) {
+    const rq = Math.min(5, Math.round(r / 255 * 5));
+    const gq = Math.min(5, Math.round(g / 255 * 5));
+    const bq = Math.min(5, Math.round(b / 255 * 5));
+    return rq * 36 + gq * 6 + bq;
+  }
+  function lzwEncodeGif(indices, colorBits) {
+    const clearCode = 1 << colorBits;
+    const eoiCode = clearCode + 1;
+    let codeSize, dict, nextCode;
+    function resetDict() {
+      dict = new Map();
+      for (let i = 0; i < clearCode; i++) dict.set(String.fromCharCode(i), i);
+      nextCode = eoiCode + 1;
+      codeSize = colorBits + 1;
+    }
+    resetDict();
+    const bytes = [];
+    let bitBuffer = 0, bitCount = 0;
+    function emit(code) {
+      bitBuffer |= (code << bitCount);
+      bitCount += codeSize;
+      while (bitCount >= 8) {
+        bytes.push(bitBuffer & 0xFF);
+        bitBuffer >>>= 8;
+        bitCount -= 8;
+      }
+    }
+    emit(clearCode);
+    let w = String.fromCharCode(indices[0]);
+    for (let i = 1; i < indices.length; i++) {
+      const k = String.fromCharCode(indices[i]);
+      const wk = w + k;
+      if (dict.has(wk)) { w = wk; continue; }
+      emit(dict.get(w));
+      if (nextCode === 4096) {
+        emit(clearCode);
+        resetDict();
+      } else {
+        dict.set(wk, nextCode);
+        nextCode++;
+        if (nextCode > (1 << codeSize) && codeSize < 12) codeSize++;
+      }
+      w = k;
+    }
+    emit(dict.get(w));
+    emit(eoiCode);
+    if (bitCount > 0) bytes.push(bitBuffer & 0xFF);
+    return bytes;
+  }
+  function gifSubBlocks(bytes) {
+    const out = [];
+    let i = 0;
+    while (i < bytes.length) {
+      const chunk = bytes.slice(i, i + 255);
+      out.push(chunk.length);
+      for (let j = 0; j < chunk.length; j++) out.push(chunk[j]);
+      i += 255;
+    }
+    out.push(0);
+    return out;
+  }
+  function encodeGif(frames, width, height, delayCs, palette) {
+    const colorBits = 8;
+    const bytes = [];
+    const pushStr = s => { for (let i = 0; i < s.length; i++) bytes.push(s.charCodeAt(i)); };
+    const pushU16 = v => { bytes.push(v & 0xFF, (v >> 8) & 0xFF); };
+    pushStr('GIF89a');
+    pushU16(width);
+    pushU16(height);
+    bytes.push(0xF7, 0, 0);
+    for (let i = 0; i < 256; i++) {
+      const c = palette[i] || [0, 0, 0];
+      bytes.push(c[0], c[1], c[2]);
+    }
+    bytes.push(0x21, 0xFF, 0x0B);
+    pushStr('NETSCAPE2.0');
+    bytes.push(0x03, 0x01, 0x00, 0x00, 0x00);
+    frames.forEach(frameIndices => {
+      bytes.push(0x21, 0xF9, 0x04, 0x00);
+      pushU16(delayCs);
+      bytes.push(0x00, 0x00);
+      bytes.push(0x2C);
+      pushU16(0); pushU16(0); pushU16(width); pushU16(height);
+      bytes.push(0x00);
+      bytes.push(colorBits);
+      const lzwBytes = lzwEncodeGif(frameIndices, colorBits);
+      const blocks = gifSubBlocks(lzwBytes);
+      for (let i = 0; i < blocks.length; i++) bytes.push(blocks[i]);
+    });
+    bytes.push(0x3B);
+    return new Uint8Array(bytes);
+  }
+  function captureReplayFrames(maxFrames, targetSize) {
+    const total = lastRunTrail.length;
+    if (total < 2) return [];
+    const frameStep = Math.max(1, Math.ceil(total / maxFrames));
+    const off = document.createElement('canvas');
+    off.width = targetSize; off.height = targetSize;
+    const offCtx = off.getContext('2d');
+    const frames = [];
+    for (let idx = 0; idx < total; idx += frameStep) {
+      const windowLen = 10;
+      const curArr = [], prevArr = [];
+      for (let i = 0; i < windowLen; i++) {
+        const ci = Math.max(0, idx - i);
+        const pi = Math.max(0, idx - i - 1);
+        curArr.push(lastRunTrail[ci]);
+        prevArr.push(lastRunTrail[pi]);
+        if (ci === 0) break;
+      }
+      const dir = idx > 0
+        ? { x: lastRunTrail[idx].x - lastRunTrail[idx - 1].x, y: lastRunTrail[idx].y - lastRunTrail[idx - 1].y }
+        : { x: 1, y: 0 };
+      ctx.clearRect(0, 0, cssSize, cssSize);
+      ctx.fillStyle = getCss('--grid');
+      ctx.fillRect(0, 0, cssSize, cssSize);
+      if (settings.gridLinesEnabled) drawGrid();
+      renderSnake(curArr, prevArr, dir, dir, getP1Colors(), 1);
+      offCtx.clearRect(0, 0, targetSize, targetSize);
+      offCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, targetSize, targetSize);
+      frames.push(offCtx.getImageData(0, 0, targetSize, targetSize).data);
+    }
+    draw(1);
+    return frames;
+  }
+  async function exportReplayGif() {
+    if (lastRunTrail.length < 2) return;
+    const origText = exportGifBtn.textContent;
+    exportGifBtn.textContent = 'Rendering…';
+    exportGifBtn.disabled = true;
+    await new Promise(r => setTimeout(r, 30));
+    try {
+      const targetSize = 200;
+      const maxFrames = 40;
+      const palette = buildGifPalette();
+      const rgbaFrames = captureReplayFrames(maxFrames, targetSize);
+      const indexedFrames = rgbaFrames.map(rgba => {
+        const idxArr = new Uint8Array(targetSize * targetSize);
+        for (let p = 0; p < idxArr.length; p++) {
+          const o = p * 4;
+          idxArr[p] = quantizeGifIndex(rgba[o], rgba[o + 1], rgba[o + 2]);
+        }
+        return idxArr;
+      });
+      const gifBytes = encodeGif(indexedFrames, targetSize, targetSize, 9, palette);
+      const blob = new Blob([gifBytes], { type: 'image/gif' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `snake-replay-${Date.now()}.gif`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } finally {
+      exportGifBtn.textContent = origText;
+      exportGifBtn.disabled = false;
+    }
+  }
+  exportGifBtn.addEventListener('click', exportReplayGif);
+
   function startReplay(returnState) {
     if (lastRunTrail.length < 2) return;
     overlay.classList.add('hidden');
@@ -3170,6 +3671,15 @@
         if (settings.difficulty === 'insane') { stats.insaneBest = Math.max(stats.insaneBest, score); saveStats(); checkAchievements(); }
       }
 
+      if (!attractMode && reason === 'collision' && snake && snake.length) {
+        stats.deaths.push({ gx: snake[0].x / cols, gy: snake[0].y / rows });
+        if (stats.deaths.length > 300) stats.deaths = stats.deaths.slice(-300);
+        saveStats();
+      }
+      if (!attractMode && runStartTime) {
+        setQuestMetricMax('surviveMax', (performance.now() - runStartTime) / 1000);
+      }
+
       maybeSaveGhost();
 
       if (settings.mode === 'classic' && !attractMode) {
@@ -3184,6 +3694,7 @@
 
       lastRunTrail = attractMode ? [] : runTrail.slice();
       watchReplayBtn.classList.toggle('hidden', lastRunTrail.length < 2);
+      exportGifBtn.classList.toggle('hidden', lastRunTrail.length < 2);
       scorecardBtn.classList.toggle('hidden', attractMode || score <= 0);
 
       pendingScoreKey = scoreKeyForMode(settings.mode);
@@ -3617,6 +4128,8 @@
       if (settings.mode === 'daily') stats.dailyPlays++;
       saveStats();
       checkAchievements();
+      runStartTime = performance.now();
+      bumpQuestMetric('games', 1);
       if (settings.mode === 'time') {
         timeRemaining = 60;
         timeEl.textContent = timeRemaining;
@@ -3742,6 +4255,7 @@
   optSeasonal.addEventListener('change', e => { settings.seasonalSkins = e.target.checked; saveSettings(); });
   optHunger.addEventListener('change', e => { settings.hungerMode = e.target.checked; saveSettings(); });
   optSwarm.addEventListener('change', e => { settings.swarmMode = e.target.checked; saveSettings(); });
+  optWeather.addEventListener('change', e => { settings.weather = e.target.value; saveSettings(); });
   optAiSkill.addEventListener('change', e => { settings.aiSkill = e.target.value; saveSettings(); });
   optP1Name.addEventListener('input', e => { settings.p1Name = e.target.value.slice(0, 12); saveSettings(); });
   optP2Name.addEventListener('input', e => { settings.p2Name = e.target.value.slice(0, 12); saveSettings(); });
@@ -3801,6 +4315,72 @@
   }
   openAchvBtn.addEventListener('click', () => { renderAchievements(); achvModal.classList.remove('hidden'); });
   achvClose.addEventListener('click', () => achvModal.classList.add('hidden'));
+
+  function updateQuestBadge() {
+    ensureDailyQuests();
+    const qp = stats.questProgress;
+    const doneCount = qp.ids.filter(id => qp.completed[id]).length;
+    questBadge.textContent = `${doneCount}/${qp.ids.length}`;
+  }
+  function renderQuests() {
+    ensureDailyQuests();
+    const qp = stats.questProgress;
+    questsList.innerHTML = '';
+    qp.ids.forEach(id => {
+      const q = questById(id);
+      if (!q) return;
+      const done = !!qp.completed[id];
+      const cur = qp.metrics[q.metric] || 0;
+      const li = document.createElement('li');
+      li.className = 'achv-row' + (done ? '' : ' locked');
+      let html = `<div class="achv-row-head"><span>${done ? '✅' : '🕓'}</span><span class="achv-name">${escapeHtml(q.desc)}</span><span>— +${QUEST_REWARD_COINS} 🪙</span></div>`;
+      if (!done) {
+        const pct = Math.max(0, Math.min(100, Math.round((cur / q.target) * 100)));
+        html += `<div class="achv-bar-track"><div class="achv-bar-fill" style="width:${pct}%"></div></div>`;
+        html += `<div class="achv-progress-label">${Math.min(Math.floor(cur), q.target)} / ${q.target}</div>`;
+      }
+      li.innerHTML = html;
+      questsList.appendChild(li);
+    });
+    updateQuestBadge();
+  }
+  openQuestsBtn.addEventListener('click', () => { renderQuests(); questsModal.classList.remove('hidden'); });
+  questsClose.addEventListener('click', () => questsModal.classList.add('hidden'));
+
+  function applyWorldTheme() {
+    const stage = WORLD_STAGES.find(s => s.id === settings.worldTheme);
+    if (stage && stats.maxLevel >= stage.unlockLevel) canvas.style.background = stage.bg;
+    else canvas.style.background = '';
+  }
+  function renderWorldMap() {
+    worldmapList.innerHTML = '';
+    const defaultLi = document.createElement('li');
+    defaultLi.className = 'achv-row';
+    defaultLi.innerHTML = `<div class="achv-row-head"><span>${settings.worldTheme === 'none' ? '●' : '○'}</span><span class="achv-name">Default</span><span>— the standard board</span></div>`;
+    defaultLi.style.cursor = 'pointer';
+    defaultLi.addEventListener('click', () => { settings.worldTheme = 'none'; saveSettings(); applyWorldTheme(); renderWorldMap(); });
+    worldmapList.appendChild(defaultLi);
+    WORLD_STAGES.forEach(stage => {
+      const unlocked = stats.maxLevel >= stage.unlockLevel;
+      const selected = settings.worldTheme === stage.id;
+      const li = document.createElement('li');
+      li.className = 'achv-row' + (unlocked ? '' : ' locked');
+      let html = `<div class="achv-row-head"><span>${unlocked ? (selected ? '●' : '○') : '🔒'}</span><span class="achv-name">${escapeHtml(stage.name)}</span><span>— unlock at level ${stage.unlockLevel}</span></div>`;
+      if (!unlocked) {
+        const pct = Math.max(0, Math.min(100, Math.round((stats.maxLevel / stage.unlockLevel) * 100)));
+        html += `<div class="achv-bar-track"><div class="achv-bar-fill" style="width:${pct}%"></div></div>`;
+        html += `<div class="achv-progress-label">${stats.maxLevel} / ${stage.unlockLevel}</div>`;
+      }
+      li.innerHTML = html;
+      if (unlocked) {
+        li.style.cursor = 'pointer';
+        li.addEventListener('click', () => { settings.worldTheme = stage.id; saveSettings(); applyWorldTheme(); renderWorldMap(); });
+      }
+      worldmapList.appendChild(li);
+    });
+  }
+  openWorldmapBtn.addEventListener('click', () => { renderWorldMap(); worldmapModal.classList.remove('hidden'); });
+  worldmapClose.addEventListener('click', () => worldmapModal.classList.add('hidden'));
 
   function updateCoinDisplays() {
     coinBalance.textContent = stats.coins;
@@ -3864,9 +4444,45 @@
       ['Daily challenges played', stats.dailyPlays],
       ['Login streak (days)', stats.loginStreak],
       ['Coins earned', stats.coins],
+      ['Bosses defeated', stats.bossesDefeated || 0],
+      ['Daily quests completed', stats.questsCompletedTotal || 0],
     ];
     statsGrid.innerHTML = rows.map(([label, val]) => `<div>${escapeHtml(label)}</div><span>${escapeHtml(String(val))}</span>`).join('');
     drawStatsSparkline();
+    drawDeathHeatmap();
+  }
+
+  function drawDeathHeatmap() {
+    const hctx = deathHeatmap.getContext('2d');
+    const w = deathHeatmap.width, h = deathHeatmap.height;
+    hctx.clearRect(0, 0, w, h);
+    hctx.fillStyle = getCss('--panel-2');
+    hctx.fillRect(0, 0, w, h);
+    if (!stats.deaths.length) {
+      hctx.fillStyle = getCss('--text-dim');
+      hctx.font = '9px system-ui, sans-serif';
+      hctx.textAlign = 'center';
+      hctx.fillText('No deaths recorded yet.', w / 2, h / 2);
+      return;
+    }
+    const bins = 15;
+    const grid = Array.from({ length: bins }, () => new Array(bins).fill(0));
+    let maxCount = 1;
+    stats.deaths.forEach(d => {
+      const bx = Math.min(bins - 1, Math.max(0, Math.floor(d.gx * bins)));
+      const by = Math.min(bins - 1, Math.max(0, Math.floor(d.gy * bins)));
+      grid[by][bx]++;
+      if (grid[by][bx] > maxCount) maxCount = grid[by][bx];
+    });
+    const cellW = w / bins, cellH = h / bins;
+    for (let y = 0; y < bins; y++) {
+      for (let x = 0; x < bins; x++) {
+        const t = grid[y][x] / maxCount;
+        if (t <= 0) continue;
+        hctx.fillStyle = `rgba(239,68,68,${0.12 + t * 0.78})`;
+        hctx.fillRect(x * cellW, y * cellH, cellW, cellH);
+      }
+    }
   }
 
   function drawStatsSparkline() {
@@ -4089,6 +4705,49 @@
     populateLayoutSelect();
     layoutNameInput.value = '';
   });
+  document.getElementById('editor-export-btn').addEventListener('click', () => {
+    if (!obstacles.length) { alert('Nothing to export — place some obstacles first.'); return; }
+    const name = layoutNameInput.value.trim() || `Layout ${Date.now() % 10000}`;
+    const data = { name, grid: settings.grid, obstacles: obstacles.map(o => ({ ...o })) };
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `snake-layout-${name.replace(/[^a-z0-9-]+/gi, '_')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+  const editorImportInput = document.getElementById('editor-import-input');
+  document.getElementById('editor-import-btn').addEventListener('click', () => editorImportInput.click());
+  editorImportInput.addEventListener('change', () => {
+    const file = editorImportInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (!data || typeof data.name !== 'string' || !Array.isArray(data.obstacles) || !GRID_SIZES[data.grid]) {
+          alert('That file is not a valid Snake layout.');
+          return;
+        }
+        const layouts = safeParseArr(localStorage.getItem(LAYOUTS_KEY)).filter(l => l.name !== data.name);
+        layouts.push({ name: data.name, grid: data.grid, obstacles: data.obstacles.map(o => ({ ...o })) });
+        localStorage.setItem(LAYOUTS_KEY, JSON.stringify(layouts.slice(-10)));
+        populateLayoutSelect();
+        if (gameState === 'editor' && data.grid === settings.grid) {
+          obstacles = data.obstacles.map(o => ({ ...o }));
+          draw(1);
+        }
+        alert(`Layout "${data.name}" imported! Select it from the Custom layout dropdown in Settings.`);
+      } catch {
+        alert('That file could not be read as a valid Snake layout.');
+      }
+    };
+    reader.readAsText(file);
+    editorImportInput.value = '';
+  });
   canvas.addEventListener('click', (e) => {
     if (gameState !== 'editor') return;
     const rect = canvas.getBoundingClientRect();
@@ -4175,7 +4834,7 @@
     if (e.key.toLowerCase() === 'e') { tryDash(); return; }
     if (e.key.toLowerCase() === 'q') { tryTailWhip(1); return; }
     if (e.key === '/') { tryTailWhip(2); e.preventDefault(); return; }
-    if (settings.mode === 'sandbox' && gameState === 'playing' && /^[1-6]$/.test(e.key)) {
+    if (settings.mode === 'sandbox' && gameState === 'playing' && /^[1-8]$/.test(e.key)) {
       spawnSandboxFood(Number(e.key));
       return;
     }
@@ -4294,6 +4953,8 @@
   populateSettingsUI();
   updateCoinDisplays();
   checkLoginStreak();
+  updateQuestBadge();
+  applyWorldTheme();
   resizeCanvasIfNeeded();
   reset();
   draw(1);
