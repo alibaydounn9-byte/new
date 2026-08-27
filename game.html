@@ -203,6 +203,37 @@
   #board-wrap {
     position: relative;
   }
+  #minimap {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 6px;
+    pointer-events: none;
+  }
+  body.dyslexia-font, body.dyslexia-font input, body.dyslexia-font select, body.dyslexia-font button {
+    font-family: 'Comic Sans MS', 'Comic Sans', Verdana, sans-serif;
+    letter-spacing: 0.02em;
+    line-height: 1.6;
+  }
+  :root[data-theme="contrast"] {
+    --bg: #000000;
+    --panel: #000000;
+    --panel-2: #1a1a1a;
+    --grid: #000000;
+    --snake-dark: #ffff00;
+    --snake-light: #ffff00;
+    --snake-head: #ffff00;
+    --food: #00ffff;
+    --food-glow: #00ffff;
+    --obstacle: #ffffff;
+    --obstacle-dark: #aaaaaa;
+    --text: #ffffff;
+    --text-dim: #ffffff;
+    --accent: #ffff00;
+    --border: #ffffff;
+  }
   canvas {
     background: var(--grid);
     border: 3px solid var(--panel);
@@ -307,7 +338,7 @@
   #touch-controls {
     display: none;
     grid-template-columns: repeat(3, 56px);
-    grid-template-rows: repeat(3, 56px);
+    grid-template-rows: repeat(4, 56px);
     gap: 6px;
   }
   #touch-controls button {
@@ -502,15 +533,18 @@
         <button id="copy-score-btn" class="secondary hidden">Copy Score</button>
         <button id="copy-link-btn" class="secondary hidden">Copy Challenge Link</button>
         <button id="watch-replay-btn" class="secondary hidden">Watch Replay</button>
+        <button id="scorecard-btn" class="secondary hidden">Share Scorecard</button>
       </div>
     </div>
+    <canvas id="minimap" width="60" height="60" class="hidden"></canvas>
   </div>
 
-  <p id="hint">Space to pause · Hold Shift to boost · Eat apples to grow. Watch for obstacles and power-ups!</p>
+  <p id="hint">Space to pause · Hold Shift to boost · E to dash · Eat apples to grow. Watch for obstacles and power-ups!</p>
 
   <div id="touch-controls">
     <div></div><button data-dir="up">▲</button><div></div>
     <button data-dir="left">◀</button><button id="boost-btn" class="secondary" title="Hold to boost">⚡</button><button data-dir="right">▶</button>
+    <div></div><button id="dash-btn" class="secondary" title="Dash">💨</button><div></div>
     <div></div><button data-dir="down">▼</button><div></div>
   </div>
 
@@ -527,12 +561,14 @@
           <option value="daily">Daily Challenge</option>
           <option value="weekly">Weekly Challenge</option>
           <option value="boss">Boss Challenge</option>
+          <option value="sandbox">Sandbox</option>
         </select>
       </label>
       <p class="modal-hint hidden" id="zen-hint">Zen always wraps around edges and has no obstacles or death — press ⏹ to end your run.</p>
       <p class="modal-hint hidden" id="daily-hint">Daily Challenge always uses Medium grid, Normal difficulty, no wrap — same board all day.</p>
       <p class="modal-hint hidden" id="weekly-hint">Weekly Challenge always uses Medium grid, Normal difficulty, no wrap — same board all week.</p>
       <p class="modal-hint hidden" id="boss-hint">Boss Challenge: hazards escalate fast — every level adds an extra, always-moving obstacle.</p>
+      <p class="modal-hint hidden" id="sandbox-hint">Sandbox: no death, no obstacles ever spawn. Press 1-6 to spawn a specific apple type on demand.</p>
       <label class="row"><input type="checkbox" id="opt-hunger"> Hunger mode (shrink if you don't eat in time)</label>
       <label class="row"><input type="checkbox" id="opt-swarm"> Multiple apples (swarm)</label>
 
@@ -624,6 +660,10 @@
       </label>
       <label class="row"><input type="checkbox" id="opt-colorblind"> Colorblind-friendly apple color</label>
       <label class="row"><input type="checkbox" id="opt-reducedmotion"> Reduce motion (particles, shake, animations)</label>
+      <label class="row"><input type="checkbox" id="opt-highcontrast"> High-contrast mode</label>
+      <label class="row"><input type="checkbox" id="opt-dyslexiafont"> Dyslexia-friendly font</label>
+      <label class="row"><input type="checkbox" id="opt-dash"> Dash ability (key: E, 5s cooldown)</label>
+      <label class="row"><input type="checkbox" id="opt-minimap"> Show minimap when wrap is on</label>
 
       <p class="section-title">Tools</p>
       <div class="link-row">
@@ -643,9 +683,14 @@
         <input type="file" id="import-save-input" accept="application/json" class="hidden">
       </div>
       <div class="link-row">
+        <button class="secondary tiny" id="export-ghost-btn">Export Ghost</button>
+        <button class="secondary tiny" id="import-ghost-btn">Import Ghost</button>
+        <input type="file" id="import-ghost-input" accept="application/json" class="hidden">
+      </div>
+      <div class="link-row">
         <button class="danger tiny" id="reset-data-btn">Reset All Data</button>
       </div>
-      <p class="modal-hint">Grid size, difficulty, wrap, layout and mode apply on your next game. · v1.4</p>
+      <p class="modal-hint">Grid size, difficulty, wrap, layout and mode apply on your next game. · v1.7</p>
       <div class="modal-actions">
         <button id="settings-close">Done</button>
       </div>
@@ -763,6 +808,8 @@
   <div id="changelog-modal" class="modal hidden">
     <div class="modal-card">
       <h2>What's New</h2>
+      <p class="section-title">v1.7</p>
+      <p class="modal-hint">A Sandbox mode, a dash ability, ghost export/import, shareable scorecard images, a wrap-mode minimap, and high-contrast/dyslexia-friendly accessibility options.</p>
       <p class="section-title">v1.6</p>
       <p class="modal-hint">Hunger mode, a swarm-of-apples option, AI skill levels, player nicknames, full custom snake colors, a live combo meter, a Weekly Challenge, a score history sparkline in Stats, an overhauled snake model, and adjustable Ultra bloom/trail/vignette settings.</p>
       <p class="section-title">v1.5</p>
@@ -943,6 +990,7 @@
   const copyScoreBtn = document.getElementById('copy-score-btn');
   const copyLinkBtn = document.getElementById('copy-link-btn');
   const watchReplayBtn = document.getElementById('watch-replay-btn');
+  const scorecardBtn = document.getElementById('scorecard-btn');
   const challengeBanner = document.getElementById('challenge-banner');
   const muteBtn = document.getElementById('mute-btn');
   const musicBtn = document.getElementById('music-btn');
@@ -976,6 +1024,13 @@
   const optUltraBloom = document.getElementById('opt-ultrabloom');
   const optUltraTrail = document.getElementById('opt-ultratrail');
   const optUltraVignette = document.getElementById('opt-ultravignette');
+  const sandboxHint = document.getElementById('sandbox-hint');
+  const optHighContrast = document.getElementById('opt-highcontrast');
+  const optDyslexiaFont = document.getElementById('opt-dyslexiafont');
+  const optDash = document.getElementById('opt-dash');
+  const optMinimap = document.getElementById('opt-minimap');
+  const dashBtn = document.getElementById('dash-btn');
+  const minimapCanvas = document.getElementById('minimap');
   const optMode = document.getElementById('opt-mode');
   const optGrid = document.getElementById('opt-grid');
   const optWrap = document.getElementById('opt-wrap');
@@ -1040,6 +1095,7 @@
       hungerMode: false, swarmMode: false, aiSkill: 'smart', p1Name: '', p2Name: '',
       customHead: '#22c55e', customBody: '#16803d',
       ultraBloom: 50, ultraTrailLength: 50, ultraVignette: false,
+      highContrast: false, dyslexiaFont: false, dashEnabled: true, minimapEnabled: true,
     },
     safeParse(localStorage.getItem(SETTINGS_KEY))
   );
@@ -1105,8 +1161,13 @@
   }
 
   function applyTheme() {
+    if (settings.highContrast) { document.documentElement.setAttribute('data-theme', 'contrast'); return; }
     if (settings.theme === 'system') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', settings.theme);
+  }
+
+  function applyDyslexiaFont() {
+    document.body.classList.toggle('dyslexia-font', settings.dyslexiaFont);
   }
 
   function applyColorblind() {
@@ -1222,6 +1283,7 @@
     dailyHint.classList.toggle('hidden', settings.mode !== 'daily');
     weeklyHint.classList.toggle('hidden', settings.mode !== 'weekly');
     bossHint.classList.toggle('hidden', settings.mode !== 'boss');
+    sandboxHint.classList.toggle('hidden', settings.mode !== 'sandbox');
     optTwoPlayer.disabled = settings.mode !== 'classic';
     optVsAI.disabled = settings.mode !== 'classic';
     optLayout.disabled = settings.mode !== 'classic';
@@ -1230,7 +1292,7 @@
     optGrid.disabled = isDailyLikeMode();
     optDifficulty.disabled = isDailyLikeMode();
     optGhost.disabled = settings.twoPlayer && !settings.vsAI;
-    optHunger.disabled = settings.mode === 'zen';
+    optHunger.disabled = settings.mode === 'zen' || settings.mode === 'sandbox';
     optAiSkill.disabled = !settings.vsAI || settings.mode !== 'classic';
     timeWrap.classList.toggle('hidden', settings.mode !== 'time');
   }
@@ -1263,6 +1325,10 @@
     optReducedMotion.checked = settings.reducedMotion;
     optCustomHead.value = settings.customHead;
     optCustomBody.value = settings.customBody;
+    optHighContrast.checked = settings.highContrast;
+    optDyslexiaFont.checked = settings.dyslexiaFont;
+    optDash.checked = settings.dashEnabled;
+    optMinimap.checked = settings.minimapEnabled;
     populateSkinSelect();
     populateAppleSkinSelect();
     populateTrailSelect();
@@ -1549,6 +1615,19 @@
     food = { x: pos.x, y: pos.y, type, expiresAt: type === 'golden' ? performance.now() + 6000 : null };
   }
 
+  const SANDBOX_FOOD_ORDER = ['normal', 'golden', 'speed', 'slow', 'shrink', 'hammer'];
+  function spawnSandboxFood(n) {
+    const type = SANDBOX_FOOD_ORDER[n - 1];
+    if (!type) return;
+    const occ = occupiedCells();
+    let pos, tries = 0;
+    do {
+      pos = { x: Math.floor(rand() * cols), y: Math.floor(rand() * rows) };
+      tries++;
+    } while (occ.some(s => s.x === pos.x && s.y === pos.y) && tries < 200);
+    food = { x: pos.x, y: pos.y, type, expiresAt: type === 'golden' ? performance.now() + 6000 : null };
+  }
+
   function pickFoodType() {
     const r = rand();
     if (r < 0.05) return 'golden';
@@ -1560,7 +1639,7 @@
   }
 
   function addObstacle(forceMoving) {
-    if (settings.mode === 'zen') return;
+    if (settings.mode === 'zen' || settings.mode === 'sandbox') return;
     if (obstacles.length >= 14) return;
     const occ = occupiedCells();
     const heads = [snake[0], snake2[0]].filter(Boolean);
@@ -1723,6 +1802,25 @@
     if (!boosting) boostTicks = 0;
     else if (gameState === 'playing') sfx.boost();
     if (gameState === 'playing') restartTimer();
+  }
+
+  let dashCooldownUntil = 0;
+  const DASH_COOLDOWN = 5000;
+  const DASH_DISTANCE = 3;
+  function tryDash() {
+    if (gameState !== 'playing' || !settings.dashEnabled) return;
+    const now = performance.now();
+    if (now < dashCooldownUntil) return;
+    dashCooldownUntil = now + DASH_COOLDOWN;
+    const savedQueue1 = dirQueue1;
+    dirQueue1 = [];
+    for (let i = 0; i < DASH_DISTANCE; i++) {
+      if (gameState !== 'playing') break;
+      step();
+    }
+    if (gameState === 'playing') dirQueue1 = savedQueue1;
+    sfx.boost();
+    vibrate(15);
   }
   function checkEffectTimers() {
     const { frenzy, slomo } = effectsActive();
@@ -2186,7 +2284,7 @@
   }
 
   function checkDeath(bodyArr, head) {
-    if (settings.mode === 'zen') return false;
+    if (settings.mode === 'zen' || settings.mode === 'sandbox') return false;
     if (!effectiveWrap() && (head.x < 0 || head.x >= cols || head.y < 0 || head.y >= rows)) return true;
     if (obstacles.some(o => o.type !== 'portal' && o.x === head.x && o.y === head.y)) return true;
     if (bodyArr.some(s => s.x === head.x && s.y === head.y)) return true;
@@ -2399,7 +2497,38 @@
     const alpha = gameState === 'playing' ? Math.min((now - lastStepTime) / effectiveSpeed(), 1) : 1;
     if (gameState === 'replay') drawReplayFrame();
     else if (gameState !== 'editor') draw(alpha);
+    drawMinimap();
+    updateDashUI();
     requestAnimationFrame(renderLoop);
+  }
+
+  function drawMinimap() {
+    const show = settings.minimapEnabled && effectiveWrap() && gameState !== 'editor' && gameState !== 'ready';
+    minimapCanvas.classList.toggle('hidden', !show);
+    if (!show) return;
+    const mctx = minimapCanvas.getContext('2d');
+    const w = minimapCanvas.width, h = minimapCanvas.height;
+    mctx.clearRect(0, 0, w, h);
+    const sx = w / cols, sy = h / rows;
+    if (food) { mctx.fillStyle = getCss('--food'); mctx.fillRect(food.x * sx, food.y * sy, Math.max(2, sx), Math.max(2, sy)); }
+    mctx.fillStyle = getCss('--snake-head');
+    snake.forEach(s => mctx.fillRect(s.x * sx, s.y * sy, Math.max(2, sx), Math.max(2, sy)));
+    if (hasSecondSnake()) {
+      mctx.fillStyle = getCss('--p2-head');
+      snake2.forEach(s => mctx.fillRect(s.x * sx, s.y * sy, Math.max(2, sx), Math.max(2, sy)));
+    }
+  }
+
+  function updateDashUI() {
+    if (!dashBtn) return;
+    const remaining = dashCooldownUntil - performance.now();
+    if (remaining > 0) {
+      dashBtn.disabled = true;
+      dashBtn.textContent = Math.ceil(remaining / 1000);
+    } else {
+      dashBtn.disabled = false;
+      dashBtn.textContent = '💨';
+    }
   }
 
   // ---------- overlay / state UI ----------
@@ -2419,6 +2548,7 @@
       daily: "Today's board — same for every attempt today.",
       weekly: "This week's board — same for every attempt this week.",
       boss: 'Hazards escalate fast — every level adds an extra, always-moving obstacle.',
+      sandbox: 'No death, no obstacles. Press 1-6 to spawn apple types on demand.',
     };
     overlayMsg.textContent = modeHint[settings.mode] || modeHint.classic;
     highscoreEntry.classList.add('hidden');
@@ -2426,6 +2556,7 @@
     copyScoreBtn.classList.add('hidden');
     copyLinkBtn.classList.add('hidden');
     watchReplayBtn.classList.add('hidden');
+    scorecardBtn.classList.add('hidden');
     startBtn.textContent = 'Start Game';
     overlay.classList.remove('hidden');
     scheduleAttract();
@@ -2482,6 +2613,7 @@
     if (mode === 'daily') return 'snake-highscores-daily-' + dailySeed();
     if (mode === 'weekly') return 'snake-highscores-weekly-' + weeklySeed();
     if (mode === 'boss') return 'snake-highscores-boss-v1';
+    if (mode === 'sandbox') return 'snake-highscores-sandbox-v1';
     return SCORES_KEY;
   }
 
@@ -2600,6 +2732,7 @@
       highscoreEntry.classList.add('hidden');
       copyLinkBtn.classList.add('hidden');
       watchReplayBtn.classList.add('hidden');
+      scorecardBtn.classList.add('hidden');
       copyScoreBtn.dataset.text = `${title} ${settings.vsAI ? `You: ${score} · AI: ${score2}` : `P1: ${score} · P2: ${score2}`} in Snake! 🐍`;
     } else {
       if (settings.mode === 'zen') overlayTitle.textContent = 'Run Complete!';
@@ -2638,6 +2771,7 @@
 
       lastRunTrail = attractMode ? [] : runTrail.slice();
       watchReplayBtn.classList.toggle('hidden', lastRunTrail.length < 2);
+      scorecardBtn.classList.toggle('hidden', attractMode || score <= 0);
 
       pendingScoreKey = scoreKeyForMode(settings.mode);
       if (checkHighScoreQualifies(pendingScoreKey, score)) {
@@ -2694,6 +2828,56 @@
     link.href = canvas.toDataURL('image/png');
     link.click();
   });
+
+  function generateScorecard() {
+    const w = 600, h = 400;
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const cctx = c.getContext('2d');
+    const bg = cctx.createLinearGradient(0, 0, w, h);
+    bg.addColorStop(0, getCss('--bg'));
+    bg.addColorStop(1, getCss('--panel'));
+    cctx.fillStyle = bg;
+    cctx.fillRect(0, 0, w, h);
+
+    cctx.textAlign = 'center';
+    cctx.fillStyle = getCss('--accent');
+    cctx.font = 'bold 28px system-ui, sans-serif';
+    cctx.fillText('🐍 SNAKE', w / 2, 60);
+
+    cctx.fillStyle = getCss('--text');
+    cctx.font = 'bold 90px system-ui, sans-serif';
+    cctx.fillText(String(score), w / 2, 190);
+
+    cctx.font = '18px system-ui, sans-serif';
+    cctx.fillStyle = getCss('--text-dim');
+    const modeLabel = settings.mode.charAt(0).toUpperCase() + settings.mode.slice(1);
+    cctx.fillText(`${modeLabel} mode · Best: ${best}`, w / 2, 230);
+    cctx.fillText(new Date().toLocaleDateString(), w / 2, 258);
+
+    const colors = getP1Colors();
+    const segSize = 26, segCount = 8, gap = 4;
+    const startX = w / 2 - (segCount * (segSize + gap)) / 2;
+    const y = 300;
+    for (let i = segCount - 1; i >= 0; i--) {
+      const x = startX + i * (segSize + gap);
+      cctx.fillStyle = colors.rainbow ? `hsl(${i * 30},80%,55%)` : (i === 0 ? (colors.head || '#22c55e') : (colors.dark || '#16803d'));
+      cctx.beginPath();
+      if (cctx.roundRect) cctx.roundRect(x, y, segSize, segSize, 8);
+      else cctx.rect(x, y, segSize, segSize);
+      cctx.fill();
+    }
+
+    cctx.font = '13px system-ui, sans-serif';
+    cctx.fillStyle = getCss('--text-dim');
+    cctx.fillText('Play in your browser — no install needed', w / 2, h - 20);
+
+    const link = document.createElement('a');
+    link.download = `snake-scorecard-${Date.now()}.png`;
+    link.href = c.toDataURL('image/png');
+    link.click();
+  }
+  scorecardBtn.addEventListener('click', generateScorecard);
 
   function checkChallengeLink() {
     const params = new URLSearchParams(location.search);
@@ -2836,6 +3020,10 @@
   optTheme.addEventListener('change', e => { settings.theme = e.target.value; saveSettings(); applyTheme(); });
   optColorblind.addEventListener('change', e => { settings.colorblind = e.target.checked; saveSettings(); applyColorblind(); });
   optReducedMotion.addEventListener('change', e => { settings.reducedMotion = e.target.checked; saveSettings(); });
+  optHighContrast.addEventListener('change', e => { settings.highContrast = e.target.checked; saveSettings(); applyTheme(); });
+  optDyslexiaFont.addEventListener('change', e => { settings.dyslexiaFont = e.target.checked; saveSettings(); applyDyslexiaFont(); });
+  optDash.addEventListener('change', e => { settings.dashEnabled = e.target.checked; saveSettings(); });
+  optMinimap.addEventListener('change', e => { settings.minimapEnabled = e.target.checked; saveSettings(); });
   optHunger.addEventListener('change', e => { settings.hungerMode = e.target.checked; saveSettings(); });
   optSwarm.addEventListener('change', e => { settings.swarmMode = e.target.checked; saveSettings(); });
   optAiSkill.addEventListener('change', e => { settings.aiSkill = e.target.value; saveSettings(); });
@@ -2998,6 +3186,43 @@
     importSaveInput.value = '';
   });
 
+  document.getElementById('export-ghost-btn').addEventListener('click', () => {
+    const key = GHOST_KEY_PREFIX + settings.mode;
+    const ghostData = localStorage.getItem(key);
+    if (!ghostData) { alert(`No saved ghost for ${settings.mode} mode yet — play a run first.`); return; }
+    const blob = new Blob([ghostData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `snake-ghost-${settings.mode}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+  const importGhostInput = document.getElementById('import-ghost-input');
+  document.getElementById('import-ghost-btn').addEventListener('click', () => importGhostInput.click());
+  importGhostInput.addEventListener('change', () => {
+    const file = importGhostInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (!data || typeof data.score !== 'number' || !Array.isArray(data.trail)) {
+          alert('That file is not a valid Snake ghost.');
+          return;
+        }
+        localStorage.setItem(GHOST_KEY_PREFIX + settings.mode, JSON.stringify(data));
+        alert(`Ghost imported for ${settings.mode} mode! Turn on "Show ghost" in Players to race it.`);
+      } catch {
+        alert('That file could not be read as a valid Snake ghost.');
+      }
+    };
+    reader.readAsText(file);
+    importGhostInput.value = '';
+  });
+
   document.getElementById('reset-data-btn').addEventListener('click', () => {
     if (!confirm('Reset ALL Snake data? This clears settings, stats, achievements, high scores, layouts, and ghosts. This cannot be undone.')) return;
     const keys = [];
@@ -3144,6 +3369,11 @@
       e.preventDefault();
       return;
     }
+    if (e.key.toLowerCase() === 'e') { tryDash(); return; }
+    if (settings.mode === 'sandbox' && gameState === 'playing' && /^[1-6]$/.test(e.key)) {
+      spawnSandboxFood(Number(e.key));
+      return;
+    }
     const twoP = hasSecondSnake();
     const d1 = dirForKey(settings.keymap.p1, e.key);
     if (d1) { trySetDir(1, d1); e.preventDefault(); return; }
@@ -3200,11 +3430,13 @@
   }
 
   document.querySelectorAll('#touch-controls button').forEach(btn => {
+    if (!btn.dataset.dir) return;
     btn.addEventListener('click', () => {
       const map = { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
       trySetDir(1, map[btn.dataset.dir]);
     });
   });
+  if (dashBtn) dashBtn.addEventListener('click', () => tryDash());
   const boostBtn = document.getElementById('boost-btn');
   if (boostBtn) {
     const startBoost = (e) => { e.preventDefault(); setBoosting(true); };
@@ -3240,6 +3472,7 @@
   applyTheme();
   applyColorblind();
   applyGlow();
+  applyDyslexiaFont();
   populateSettingsUI();
   resizeCanvasIfNeeded();
   reset();
