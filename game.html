@@ -690,6 +690,7 @@
       <p class="modal-hint hidden" id="speedrun-hint">Speedrun: race to score 20 as fast as possible — the clock counts up.</p>
       <label class="row"><input type="checkbox" id="opt-hunger"> Hunger mode (shrink if you don't eat in time)</label>
       <label class="row"><input type="checkbox" id="opt-swarm"> Multiple apples (swarm)</label>
+      <label class="row"><input type="checkbox" id="opt-fillwin"> Fill the whole board to win (no obstacles ever spawn)</label>
       <label>Weather
         <select id="opt-weather">
           <option value="none">None</option>
@@ -1095,6 +1096,7 @@
     { id: 'streak-silver', name: 'Regular', desc: 'Play on 3 days in a row.', tier: 'silver', check: s => s.loginStreak >= 3, progress: s => [s.loginStreak, 3] },
     { id: 'streak-gold', name: 'Dedicated', desc: 'Play on 7 days in a row.', tier: 'gold', check: s => s.loginStreak >= 7, progress: s => [s.loginStreak, 7] },
     { id: 'boss-slayer', name: 'Boss Slayer', desc: 'Defeat a Boss in Boss Challenge.', check: s => s.bossesDefeated >= 1, progress: s => [s.bossesDefeated, 1] },
+    { id: 'board-master', name: 'Board Master', desc: 'Fill the entire board with your snake.', check: s => s.boardsFilled >= 1, progress: s => [s.boardsFilled, 1] },
     { id: 'quest-regular', name: 'Quest Regular', desc: 'Complete 10 daily quests in total.', tier: 'silver', check: s => s.questsCompletedTotal >= 10, progress: s => [s.questsCompletedTotal, 10] },
   ];
   const SHOP_ITEMS = [
@@ -1248,6 +1250,7 @@
   const timeSplitEl = document.getElementById('time-split');
   const optHunger = document.getElementById('opt-hunger');
   const optSwarm = document.getElementById('opt-swarm');
+  const optFillWin = document.getElementById('opt-fillwin');
   const optWeather = document.getElementById('opt-weather');
   const optAiSkill = document.getElementById('opt-aiskill');
   const optP1Name = document.getElementById('opt-p1name');
@@ -1361,7 +1364,7 @@
       snakeStyle: 'smooth', particlesEnabled: true, shakeEnabled: true, glowEnabled: true, gridLinesEnabled: true,
       graphicsQuality: 'high',
       vsAI: false, vibration: true, soundTheme: 'arcade', musicTrack: 'calm',
-      hungerMode: false, swarmMode: false, aiSkill: 'smart', p1Name: '', p2Name: '',
+      hungerMode: false, swarmMode: false, fillToWin: false, aiSkill: 'smart', p1Name: '', p2Name: '',
       customHead: '#22c55e', customBody: '#16803d',
       ultraBloom: 50, ultraTrailLength: 50, ultraVignette: false,
       highContrast: false, dyslexiaFont: false, dashEnabled: true, minimapEnabled: true,
@@ -1378,7 +1381,7 @@
   let stats = Object.assign({
     gamesPlayed: 0, applesEaten: 0, longestSnake: 3, p1Wins: 0, p2Wins: 0, ties: 0,
     goldenEaten: 0, speedEaten: 0, comboMax: 0, dailyPlays: 0, hardBest: 0, insaneBest: 0, maxLevel: 1,
-    aiWins: 0, aiLosses: 0, bossesDefeated: 0,
+    aiWins: 0, aiLosses: 0, bossesDefeated: 0, boardsFilled: 0,
     unlocked: [], scoreHistory: [], deaths: [],
     loginStreak: 0, lastPlayedDate: '', coins: 0, purchased: [],
     questProgress: { date: '', ids: [], metrics: {}, completed: {} }, questsCompletedTotal: 0,
@@ -1678,6 +1681,7 @@
     optP2Name.value = settings.p2Name;
     optHunger.checked = settings.hungerMode;
     optSwarm.checked = settings.swarmMode;
+    optFillWin.checked = settings.fillToWin;
     optWeather.value = settings.weather;
     optTheme.value = settings.theme;
     optColorblind.checked = settings.colorblind;
@@ -1904,7 +1908,7 @@
     score2 = 0;
     level = 1;
     food = null;
-    obstacles = loadCustomLayout() || [];
+    obstacles = settings.fillToWin ? [] : (loadCustomLayout() || []);
     frenzyUntil = 0;
     slomoUntil = 0;
     magnetUntil = 0;
@@ -2023,7 +2027,7 @@
   }
 
   function addObstacle(forceMoving) {
-    if (settings.mode === 'zen' || settings.mode === 'sandbox') return;
+    if (settings.mode === 'zen' || settings.mode === 'sandbox' || settings.fillToWin) return;
     if (obstacles.length >= 14) return;
     const occ = occupiedCells();
     const heads = [snake[0], snake2[0]].filter(Boolean);
@@ -3166,6 +3170,12 @@
       }
     }
 
+    if (settings.fillToWin && !twoP && snake.length >= cols * rows) {
+      if (attractMode) { reset(); return; }
+      gameOver(false, false, 'fillwin');
+      return;
+    }
+
     maybeLevelUp();
     lastStepTime = performance.now();
   }
@@ -3636,12 +3646,21 @@
       scorecardBtn.classList.add('hidden');
       copyScoreBtn.dataset.text = `${title} ${settings.vsAI ? `You: ${score} · AI: ${score2}` : `P1: ${score} · P2: ${score2}`} in Snake! 🐍`;
     } else {
-      if (settings.mode === 'zen') overlayTitle.textContent = 'Run Complete!';
+      if (reason === 'fillwin') overlayTitle.textContent = 'You Win! 🏆';
+      else if (settings.mode === 'zen') overlayTitle.textContent = 'Run Complete!';
       else if (reason === 'time') overlayTitle.textContent = "Time's Up!";
       else if (reason === 'hunger') overlayTitle.textContent = 'Starved!';
       else if (reason === 'speedrun-win') overlayTitle.textContent = 'Finished!';
       else overlayTitle.textContent = 'Game Over';
-      if (reason === 'speedrun-win') {
+      if (reason === 'fillwin') {
+        spawnConfetti();
+        if (!attractMode) {
+          stats.boardsFilled = (stats.boardsFilled || 0) + 1;
+          saveStats();
+          checkAchievements();
+        }
+        overlayMsg.textContent = `The board is completely full! Score: ${score}`;
+      } else if (reason === 'speedrun-win') {
         const bestTime = Number(localStorage.getItem(SPEEDRUN_BEST_KEY)) || null;
         if (!bestTime || elapsed < bestTime) {
           localStorage.setItem(SPEEDRUN_BEST_KEY, elapsed);
@@ -4255,6 +4274,7 @@
   optSeasonal.addEventListener('change', e => { settings.seasonalSkins = e.target.checked; saveSettings(); });
   optHunger.addEventListener('change', e => { settings.hungerMode = e.target.checked; saveSettings(); });
   optSwarm.addEventListener('change', e => { settings.swarmMode = e.target.checked; saveSettings(); });
+  optFillWin.addEventListener('change', e => { settings.fillToWin = e.target.checked; saveSettings(); });
   optWeather.addEventListener('change', e => { settings.weather = e.target.value; saveSettings(); });
   optAiSkill.addEventListener('change', e => { settings.aiSkill = e.target.value; saveSettings(); });
   optP1Name.addEventListener('input', e => { settings.p1Name = e.target.value.slice(0, 12); saveSettings(); });
@@ -4445,6 +4465,7 @@
       ['Login streak (days)', stats.loginStreak],
       ['Coins earned', stats.coins],
       ['Bosses defeated', stats.bossesDefeated || 0],
+      ['Boards filled (Win)', stats.boardsFilled || 0],
       ['Daily quests completed', stats.questsCompletedTotal || 0],
     ];
     statsGrid.innerHTML = rows.map(([label, val]) => `<div>${escapeHtml(label)}</div><span>${escapeHtml(String(val))}</span>`).join('');
