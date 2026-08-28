@@ -716,13 +716,23 @@
       <p class="modal-hint hidden" id="weekly-hint">Weekly Challenge always uses Medium grid, Normal difficulty, no wrap — same board all week.</p>
       <p class="modal-hint hidden" id="boss-hint">Boss Challenge: hazards escalate fast, and every 3 levels a Boss with a health bar appears — eating apples damages it; defeat it for a +10 bonus.</p>
       <p class="modal-hint hidden" id="sandbox-hint">Sandbox: no death, no obstacles ever spawn. Press 1-8 to spawn a specific apple type on demand.</p>
-      <p class="modal-hint hidden" id="fillwin-hint">Fill to Win: no rocks ever spawn on the map — grow your snake to fill every single cell of the board to win! Crashing into a wall or yourself still ends the run.</p>
+      <p class="modal-hint hidden" id="fillwin-hint">Fill to Win: no rocks ever spawn, no dash, no boost, and only plain apples appear (no power-ups) — grow your snake to fill every single cell of the board to win! Crashing into a wall or yourself still ends the run.</p>
       <p class="modal-hint hidden" id="speedrun-hint">Speedrun: race to score 20 as fast as possible — the clock counts up.</p>
       <p class="modal-hint hidden" id="endless-hint">Endless: hazards keep escalating forever with no obstacle cap — see how long you can survive.</p>
       <p class="modal-hint hidden" id="rushhour-hint">Rush Hour: every lane has a nonstop moving obstacle, like crossing traffic. Time your gaps!</p>
       <p class="modal-hint hidden" id="random-hint">Randomizer: grid, difficulty, wrap and weather are re-rolled randomly every time you start a run.</p>
       <label class="row"><input type="checkbox" id="opt-hunger"> Hunger mode (shrink if you don't eat in time)</label>
-      <label class="row"><input type="checkbox" id="opt-swarm"> Multiple apples (swarm)</label>
+      <label>Apples on map at once
+        <select id="opt-foodcount">
+          <option value="1">1 (Classic)</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="8">8</option>
+        </select>
+      </label>
       <label class="row"><input type="checkbox" id="opt-fillwin"> Fill the whole board to win (no obstacles ever spawn)</label>
       <label class="row"><input type="checkbox" id="opt-mirror"> Mirror controls (left/right reversed)</label>
       <label class="row"><input type="checkbox" id="opt-painttrail"> Paint trail (snake leaves a permanent colored trail)</label>
@@ -736,9 +746,9 @@
 
       <label>Grid size
         <select id="opt-grid">
-          <option value="small">Small (15×15)</option>
+          <option value="small">Small (16×16)</option>
           <option value="medium">Medium (20×20)</option>
-          <option value="large">Large (25×25)</option>
+          <option value="large">Large (26×26)</option>
           <option value="huge">Huge (30×30)</option>
         </select>
       </label>
@@ -1152,7 +1162,7 @@
   function saveProfilesList(list) { localStorage.setItem(PROFILES_LIST_KEY, JSON.stringify(list)); }
 
   const CELL = 20;
-  const GRID_SIZES = { small: 15, medium: 20, large: 25, huge: 30 };
+  const GRID_SIZES = { small: 16, medium: 20, large: 26, huge: 30 };
   const DIFFICULTY = {
     easy:   { start: 220, floor: 150, step: 2 },
     normal: { start: 170, floor: 100, step: 3 },
@@ -1397,7 +1407,7 @@
   const weeklyHint = document.getElementById('weekly-hint');
   const timeSplitEl = document.getElementById('time-split');
   const optHunger = document.getElementById('opt-hunger');
-  const optSwarm = document.getElementById('opt-swarm');
+  const optFoodCount = document.getElementById('opt-foodcount');
   const optFillWin = document.getElementById('opt-fillwin');
   const optWeather = document.getElementById('opt-weather');
   const optAiSkill = document.getElementById('opt-aiskill');
@@ -1533,7 +1543,7 @@
       snakeStyle: 'smooth', particlesEnabled: true, shakeEnabled: true, glowEnabled: true, gridLinesEnabled: true,
       graphicsQuality: 'high',
       vsAI: false, vibration: true, soundTheme: 'arcade', musicTrack: 'calm',
-      hungerMode: false, swarmMode: false, fillToWin: false, aiSkill: 'smart', p1Name: '', p2Name: '',
+      hungerMode: false, foodCount: 1, fillToWin: false, aiSkill: 'smart', p1Name: '', p2Name: '',
       customHead: '#22c55e', customBody: '#16803d',
       ultraBloom: 50, ultraTrailLength: 50, ultraVignette: false,
       highContrast: false, dyslexiaFont: false, dashEnabled: true, minimapEnabled: true,
@@ -1842,7 +1852,8 @@
     optDifficulty.disabled = isDailyLikeMode();
     optGhost.disabled = settings.twoPlayer && !settings.vsAI;
     optHunger.disabled = settings.mode === 'zen' || settings.mode === 'sandbox' || settings.mode === 'fillwin';
-    optSwarm.disabled = settings.mode === 'fillwin';
+    optFoodCount.disabled = settings.mode === 'fillwin' || settings.mode === 'sandbox';
+    optFoodCount.value = optFoodCount.disabled ? 1 : settings.foodCount;
     optFillWin.disabled = settings.mode === 'fillwin';
     optAiSkill.disabled = !settings.vsAI || settings.mode !== 'classic';
     timeWrap.classList.toggle('hidden', settings.mode !== 'time');
@@ -1880,7 +1891,7 @@
     optTournamentBestOf.value = settings.tournamentBestOf;
     updateTournamentStatus();
     optHunger.checked = settings.hungerMode;
-    optSwarm.checked = settings.swarmMode;
+    optFoodCount.value = settings.foodCount;
     optFillWin.checked = settings.fillToWin;
     optMirror.checked = settings.mirrorControls;
     optPaintTrail.checked = settings.paintTrail;
@@ -2215,8 +2226,10 @@
   }
 
   function maintainSwarmFood() {
-    if (!settings.swarmMode) { extraFoods = []; return; }
-    while (extraFoods.length < 3) placeExtraFood();
+    const target = (settings.mode === 'sandbox' || isFillToWinMode()) ? 1 : settings.foodCount;
+    if (target <= 1) { extraFoods = []; return; }
+    while (extraFoods.length < target - 1) placeExtraFood();
+    if (extraFoods.length > target - 1) extraFoods = extraFoods.slice(0, target - 1);
   }
 
   function checkExtraFoodEat(head, player) {
@@ -2298,6 +2311,7 @@
   }
 
   function pickFoodType() {
+    if (isFillToWinMode()) return 'normal';
     const r = rand();
     if (r < 0.05) return 'golden';
     if (r < 0.10) return 'speed';
@@ -2514,6 +2528,7 @@
     return Math.max(30, s);
   }
   function setBoosting(on) {
+    if (isFillToWinMode() && on) return;
     if (boosting === on) return;
     boosting = on;
     if (!boosting) boostTicks = 0;
@@ -2548,7 +2563,7 @@
   const DASH_COOLDOWN = 5000;
   const DASH_DISTANCE = 3;
   function tryDash() {
-    if (gameState !== 'playing' || !settings.dashEnabled) return;
+    if (gameState !== 'playing' || !settings.dashEnabled || isFillToWinMode()) return;
     const now = performance.now();
     if (now < dashCooldownUntil) return;
     dashCooldownUntil = now + DASH_COOLDOWN;
@@ -3617,7 +3632,7 @@
       boss: 'Hazards escalate fast, and every 3 levels a Boss with a health bar appears — eating apples damages it.',
       sandbox: 'No death, no obstacles. Press 1-8 to spawn apple types on demand.',
       speedrun: `Race to score ${SPEEDRUN_TARGET} as fast as you can!`,
-      fillwin: 'No rocks ever spawn — fill the entire board with your snake to win!',
+      fillwin: 'No rocks, no dash, no boost, no power-ups — fill the entire board with your snake to win!',
       endless: 'Hazards escalate forever with no obstacle cap — how long can you last?',
       rushhour: 'Nonstop moving traffic lanes — time your crossings!',
       random: 'Grid, difficulty, wrap and weather are randomized for this run!',
@@ -4716,7 +4731,7 @@
   optMinimap.addEventListener('change', e => { settings.minimapEnabled = e.target.checked; saveSettings(); });
   optSeasonal.addEventListener('change', e => { settings.seasonalSkins = e.target.checked; saveSettings(); });
   optHunger.addEventListener('change', e => { settings.hungerMode = e.target.checked; saveSettings(); });
-  optSwarm.addEventListener('change', e => { settings.swarmMode = e.target.checked; saveSettings(); });
+  optFoodCount.addEventListener('change', e => { settings.foodCount = Number(e.target.value) || 1; saveSettings(); });
   optFillWin.addEventListener('change', e => { settings.fillToWin = e.target.checked; saveSettings(); });
   optMirror.addEventListener('change', e => { settings.mirrorControls = e.target.checked; saveSettings(); });
   optPaintTrail.addEventListener('change', e => { settings.paintTrail = e.target.checked; saveSettings(); });
