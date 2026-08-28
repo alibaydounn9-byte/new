@@ -310,6 +310,21 @@
     gap: 8px;
     justify-content: center;
   }
+  #perk-select-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+  #perk-select-row select {
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--text);
+    font-size: 0.85rem;
+  }
   #overlay-settings-btn {
     flex-basis: 100%;
     display: inline-flex;
@@ -619,11 +634,20 @@
     <div id="overlay">
       <h2 id="overlay-title">Ready?</h2>
       <p id="overlay-msg">Use arrow keys or WASD to move</p>
+      <p id="achv-spotlight" class="modal-hint hidden"></p>
       <p id="challenge-banner" class="modal-hint hidden"></p>
       <div id="highscore-entry" class="hidden">
         <input id="name-input" maxlength="12" placeholder="Your name">
         <button id="save-score-btn">Save Score</button>
       </div>
+      <label id="perk-select-row" class="hidden">Perk:
+        <select id="perk-select">
+          <option value="none">None</option>
+          <option value="extralife">Extra Life (survive one crash)</option>
+          <option value="headstart">Head Start (+3 starting length)</option>
+          <option value="quickstart">Quick Start (3s speed frenzy)</option>
+        </select>
+      </label>
       <div id="overlay-actions">
         <button id="start-btn">Start Game</button>
         <button id="overlay-settings-btn" title="Settings">
@@ -648,6 +672,7 @@
         <button id="copy-link-btn" class="secondary hidden">Copy Challenge Link</button>
         <button id="watch-replay-btn" class="secondary hidden">Watch Replay</button>
         <button id="export-gif-btn" class="secondary hidden">Download GIF</button>
+        <button id="export-art-btn" class="secondary hidden">Export Art (PNG)</button>
         <button id="scorecard-btn" class="secondary hidden">Share Scorecard</button>
       </div>
       <canvas id="qr-canvas" class="hidden" width="120" height="120"></canvas>
@@ -681,6 +706,9 @@
           <option value="sandbox">Sandbox</option>
           <option value="speedrun">Speedrun (Any%)</option>
           <option value="fillwin">Fill to Win</option>
+          <option value="endless">Endless (Marathon)</option>
+          <option value="rushhour">Rush Hour</option>
+          <option value="random">Randomizer</option>
         </select>
       </label>
       <p class="modal-hint hidden" id="zen-hint">Zen always wraps around edges and has no obstacles or death — press ⏹ to end your run.</p>
@@ -690,9 +718,14 @@
       <p class="modal-hint hidden" id="sandbox-hint">Sandbox: no death, no obstacles ever spawn. Press 1-8 to spawn a specific apple type on demand.</p>
       <p class="modal-hint hidden" id="fillwin-hint">Fill to Win: no rocks ever spawn on the map — grow your snake to fill every single cell of the board to win! Crashing into a wall or yourself still ends the run.</p>
       <p class="modal-hint hidden" id="speedrun-hint">Speedrun: race to score 20 as fast as possible — the clock counts up.</p>
+      <p class="modal-hint hidden" id="endless-hint">Endless: hazards keep escalating forever with no obstacle cap — see how long you can survive.</p>
+      <p class="modal-hint hidden" id="rushhour-hint">Rush Hour: every lane has a nonstop moving obstacle, like crossing traffic. Time your gaps!</p>
+      <p class="modal-hint hidden" id="random-hint">Randomizer: grid, difficulty, wrap and weather are re-rolled randomly every time you start a run.</p>
       <label class="row"><input type="checkbox" id="opt-hunger"> Hunger mode (shrink if you don't eat in time)</label>
       <label class="row"><input type="checkbox" id="opt-swarm"> Multiple apples (swarm)</label>
       <label class="row"><input type="checkbox" id="opt-fillwin"> Fill the whole board to win (no obstacles ever spawn)</label>
+      <label class="row"><input type="checkbox" id="opt-mirror"> Mirror controls (left/right reversed)</label>
+      <label class="row"><input type="checkbox" id="opt-painttrail"> Paint trail (snake leaves a permanent colored trail)</label>
       <label>Weather
         <select id="opt-weather">
           <option value="none">None</option>
@@ -730,6 +763,22 @@
         </select>
       </label>
 
+      <p class="section-title">Custom Scoring</p>
+      <p class="modal-hint">Tweak how many points each apple type is worth. Leave alone for defaults.</p>
+      <div class="row" style="flex-wrap:wrap; gap:8px;">
+        <label style="flex:1 1 40%;">Normal 🍎 <input type="number" id="pts-normal" min="0" max="99" step="1" style="width:60px;"></label>
+        <label style="flex:1 1 40%;">Golden ⭐ <input type="number" id="pts-golden" min="0" max="99" step="1" style="width:60px;"></label>
+        <label style="flex:1 1 40%;">Speed ⚡ <input type="number" id="pts-speed" min="0" max="99" step="1" style="width:60px;"></label>
+        <label style="flex:1 1 40%;">Slow ❄ <input type="number" id="pts-slow" min="0" max="99" step="1" style="width:60px;"></label>
+        <label style="flex:1 1 40%;">Shrink ✂ <input type="number" id="pts-shrink" min="0" max="99" step="1" style="width:60px;"></label>
+        <label style="flex:1 1 40%;">Hammer 🔨 <input type="number" id="pts-hammer" min="0" max="99" step="1" style="width:60px;"></label>
+        <label style="flex:1 1 40%;">Magnet 🧲 <input type="number" id="pts-magnet" min="0" max="99" step="1" style="width:60px;"></label>
+        <label style="flex:1 1 40%;">Shield 🛡 <input type="number" id="pts-shield" min="0" max="99" step="1" style="width:60px;"></label>
+      </div>
+      <div class="link-row">
+        <button class="secondary tiny" id="reset-scoring-btn">Reset to defaults</button>
+      </div>
+
       <p class="section-title">Audio</p>
       <label>Music volume
         <input type="range" id="opt-musicvolume" min="0" max="100" step="5">
@@ -755,6 +804,14 @@
           <option value="epic">Epic</option>
         </select>
       </label>
+      <label>Victory fanfare
+        <select id="opt-fanfare">
+          <option value="classic">Classic chime</option>
+          <option value="epic">Epic arpeggio</option>
+          <option value="chiptune">8-bit jingle</option>
+          <option value="none">None</option>
+        </select>
+      </label>
 
       <p class="section-title">Players</p>
       <label class="row"><input type="checkbox" id="opt-twoplayer"> Two-player (P1: Arrows · P2: WASD)</label>
@@ -774,6 +831,16 @@
       <label>Player 2 name
         <input id="opt-p2name" maxlength="12" placeholder="P2">
       </label>
+      <label>Tournament
+        <select id="opt-tournament-bestof">
+          <option value="0">Off</option>
+          <option value="3">Best of 3</option>
+          <option value="5">Best of 5</option>
+          <option value="7">Best of 7</option>
+        </select>
+      </label>
+      <p class="modal-hint" id="tournament-status"></p>
+      <div class="link-row"><button class="secondary tiny" id="tournament-reset-btn">Reset Series</button></div>
 
       <p class="section-title">Appearance</p>
       <label>Snake skin
@@ -789,6 +856,9 @@
       <label>Snake trail
         <select id="opt-trail"></select>
       </label>
+      <label>Hat
+        <select id="opt-hat"></select>
+      </label>
       <label>Theme
         <select id="opt-theme">
           <option value="system">System</option>
@@ -799,7 +869,12 @@
           <option value="forest">Forest</option>
         </select>
       </label>
-      <label class="row"><input type="checkbox" id="opt-colorblind"> Colorblind-friendly apple color</label>
+      <label class="row"><input type="checkbox" id="opt-colorblind"> Colorblind-friendly apple color
+        <span id="colorblind-preview" style="display:inline-flex; gap:4px; margin-left:6px; vertical-align:middle;">
+          <span title="Default" style="width:14px; height:14px; border-radius:50%; background:#ef4444; display:inline-block;"></span>
+          <span title="Colorblind-friendly" style="width:14px; height:14px; border-radius:50%; background:#3b82f6; display:inline-block;"></span>
+        </span>
+      </label>
       <label class="row"><input type="checkbox" id="opt-reducedmotion"> Reduce motion (particles, shake, animations)</label>
       <label class="row"><input type="checkbox" id="opt-highcontrast"> High-contrast mode</label>
       <label class="row"><input type="checkbox" id="opt-dyslexiafont"> Dyslexia-friendly font</label>
@@ -817,8 +892,11 @@
         <button class="secondary tiny" id="open-graphics-btn">Graphics</button>
         <button class="secondary tiny" id="open-shop-btn">Shop 🪙<span id="coin-balance">0</span></button>
         <button class="secondary tiny" id="open-worldmap-btn">World Map</button>
+        <button class="secondary tiny" id="open-encyclopedia-btn">Apple Guide</button>
+        <button class="secondary tiny" id="open-profiles-btn">Profiles</button>
         <button class="secondary tiny" id="open-credits-btn">Credits</button>
       </div>
+      <label class="row"><input type="checkbox" id="opt-dailyreminder"> 🔔 Notify me when today's Daily Challenge hasn't been played yet</label>
 
       <p class="section-title">Data</p>
       <div class="link-row">
@@ -880,6 +958,7 @@
       <h2>Achievements</h2>
       <ul id="achv-list"></ul>
       <div class="modal-actions">
+        <button class="secondary" id="export-certificate-btn">Export Certificate</button>
         <button id="achv-close">Close</button>
       </div>
     </div>
@@ -892,6 +971,31 @@
       <ul id="worldmap-list"></ul>
       <div class="modal-actions">
         <button id="worldmap-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="encyclopedia-modal" class="modal hidden">
+    <div class="modal-card">
+      <h2>Apple Guide</h2>
+      <ul id="encyclopedia-list" class="achv-list"></ul>
+      <div class="modal-actions">
+        <button id="encyclopedia-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="profiles-modal" class="modal hidden">
+    <div class="modal-card">
+      <h2>Profiles</h2>
+      <p class="modal-hint">Each profile keeps its own stats, settings and high score separately — handy if more than one person plays on this device.</p>
+      <ul id="profiles-list"></ul>
+      <div class="row">
+        <input id="new-profile-input" maxlength="16" placeholder="New profile name">
+        <button class="tiny" id="new-profile-btn">Create</button>
+      </div>
+      <div class="modal-actions">
+        <button id="profiles-close">Close</button>
       </div>
     </div>
   </div>
@@ -913,9 +1017,12 @@
       <div class="stats-grid" id="stats-grid"></div>
       <p class="section-title">Recent scores (Classic)</p>
       <canvas id="stats-sparkline" width="300" height="60" style="width:100%;height:60px;"></canvas>
+      <p class="section-title">Longest snake over time</p>
+      <canvas id="length-sparkline" width="300" height="60" style="width:100%;height:60px;"></canvas>
       <p class="section-title">Where you die</p>
       <canvas id="death-heatmap" width="150" height="150" style="width:100%;max-width:220px;height:auto;image-rendering:pixelated;"></canvas>
       <div class="modal-actions">
+        <button class="secondary" id="export-timelapse-btn">Session Time-lapse GIF</button>
         <button id="stats-close">Close</button>
       </div>
     </div>
@@ -1034,6 +1141,16 @@
 
 <script>
 (function () {
+  const ACTIVE_PROFILE_KEY = 'snake-active-profile';
+  const PROFILES_LIST_KEY = 'snake-profiles-v1';
+  function activeProfile() { return localStorage.getItem(ACTIVE_PROFILE_KEY) || 'Default'; }
+  function profilePrefix() { const p = activeProfile(); return p === 'Default' ? '' : 'p_' + p + '__'; }
+  function listProfiles() {
+    const list = JSON.parse(localStorage.getItem(PROFILES_LIST_KEY) || '["Default"]');
+    return Array.isArray(list) && list.length ? list : ['Default'];
+  }
+  function saveProfilesList(list) { localStorage.setItem(PROFILES_LIST_KEY, JSON.stringify(list)); }
+
   const CELL = 20;
   const GRID_SIZES = { small: 15, medium: 20, large: 25, huge: 30 };
   const DIFFICULTY = {
@@ -1109,7 +1226,18 @@
     { type: 'appleskin', id: 'citrus', name: 'Citrus Apple', price: 20 },
     { type: 'trail', id: 'fire', name: 'Fire Trail', price: 40 },
     { type: 'trail', id: 'ice', name: 'Ice Trail', price: 40 },
+    { type: 'hat', id: 'party', name: 'Party Hat', price: 15 },
+    { type: 'hat', id: 'cap', name: 'Cap', price: 15 },
+    { type: 'hat', id: 'crown', name: 'Crown', price: 35 },
+    { type: 'hat', id: 'halo', name: 'Halo', price: 35 },
   ];
+  const HATS = {
+    none: { name: 'None', unlock: null },
+    party: { name: 'Party Hat', unlock: null },
+    cap: { name: 'Cap', unlock: null },
+    crown: { name: 'Crown', unlock: 'century' },
+    halo: { name: 'Halo', unlock: 'survivor' },
+  };
   const QUEST_POOL = [
     { id: 'apples10', desc: 'Eat 10 apples today', target: 10, metric: 'apples' },
     { id: 'apples25', desc: 'Eat 25 apples today', target: 25, metric: 'apples' },
@@ -1125,6 +1253,16 @@
     { id: 'hammer1', desc: 'Destroy an obstacle with a hammer apple', target: 1, metric: 'hammerApple' },
   ];
   const QUEST_REWARD_COINS = 10;
+  const FOOD_DESCRIPTIONS = {
+    normal: 'A plain apple. Eat it to grow by one segment and score a point.',
+    golden: 'Worth 5x the points of a normal apple, but disappears after 6 seconds — grab it fast!',
+    speed: 'Triggers a Speed Frenzy: you move faster and score double points for 5 seconds.',
+    slow: 'Triggers Slow-mo: everything moves at a relaxed pace for 5 seconds — handy for tight spots.',
+    shrink: 'Shrinks your tail by up to 2 segments instead of growing you.',
+    hammer: 'Destroys a random obstacle on the board (never the Boss).',
+    magnet: 'Pulls any nearby food one cell closer to your head, every tick, for 6 seconds.',
+    shield: 'Absorbs your next fatal crash — you survive, the shield breaks.',
+  };
   const WORLD_STAGES = [
     { id: 'grasslands', name: 'Grasslands', unlockLevel: 1, bg: 'linear-gradient(135deg, #d9f2c4, #a8dd88)' },
     { id: 'desert', name: 'Desert Dunes', unlockLevel: 5, bg: 'linear-gradient(135deg, #fde7b8, #e8b975)' },
@@ -1137,12 +1275,16 @@
     p2: { up: 'w', down: 's', left: 'a', right: 'd' },
   };
   const ACTION_DIRS = { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
+  function applyMirrorX(d) {
+    if (!d || !settings.mirrorControls) return d;
+    return { x: -d.x, y: d.y };
+  }
 
-  const SETTINGS_KEY = 'snake-settings-v3';
-  const BEST_KEY = 'snake-best-score';
+  const SETTINGS_KEY = profilePrefix() + 'snake-settings-v3';
+  const BEST_KEY = profilePrefix() + 'snake-best-score';
   const MUTE_KEY = 'snake-muted';
-  const SCORES_KEY = 'snake-highscores-v1';
-  const STATS_KEY = 'snake-stats-v1';
+  const SCORES_KEY = profilePrefix() + 'snake-highscores-v1';
+  const STATS_KEY = profilePrefix() + 'snake-stats-v1';
   const LAYOUTS_KEY = 'snake-layouts-v1';
   const GHOST_KEY_PREFIX = 'snake-ghost-';
   const TIME_SPLITS_KEY = 'snake-time-splits-best';
@@ -1219,14 +1361,18 @@
   const nameInput = document.getElementById('name-input');
   const saveScoreBtn = document.getElementById('save-score-btn');
   const startBtn = document.getElementById('start-btn');
+  const perkSelect = document.getElementById('perk-select');
+  const perkSelectRow = document.getElementById('perk-select-row');
   const viewScoresBtn = document.getElementById('view-scores-btn');
   const copyScoreBtn = document.getElementById('copy-score-btn');
   const copyLinkBtn = document.getElementById('copy-link-btn');
   const qrCanvas = document.getElementById('qr-canvas');
   const watchReplayBtn = document.getElementById('watch-replay-btn');
   const exportGifBtn = document.getElementById('export-gif-btn');
+  const exportArtBtn = document.getElementById('export-art-btn');
   const scorecardBtn = document.getElementById('scorecard-btn');
   const challengeBanner = document.getElementById('challenge-banner');
+  const achvSpotlight = document.getElementById('achv-spotlight');
   const muteBtn = document.getElementById('mute-btn');
   const iconSoundOn = document.getElementById('icon-sound-on');
   const iconSoundOff = document.getElementById('icon-sound-off');
@@ -1263,6 +1409,7 @@
   const comboMeter = document.getElementById('combo-meter');
   const comboMeterFill = document.getElementById('combo-meter-fill');
   const statsSparkline = document.getElementById('stats-sparkline');
+  const lengthSparkline = document.getElementById('length-sparkline');
   const deathHeatmap = document.getElementById('death-heatmap');
   const ultraSettings = document.getElementById('ultra-settings');
   const optUltraBloom = document.getElementById('opt-ultrabloom');
@@ -1270,6 +1417,14 @@
   const optUltraVignette = document.getElementById('opt-ultravignette');
   const sandboxHint = document.getElementById('sandbox-hint');
   const fillwinHint = document.getElementById('fillwin-hint');
+  const endlessHint = document.getElementById('endless-hint');
+  const rushhourHint = document.getElementById('rushhour-hint');
+  const randomHint = document.getElementById('random-hint');
+  const optMirror = document.getElementById('opt-mirror');
+  const optPaintTrail = document.getElementById('opt-painttrail');
+  const PTS_INPUT_IDS = { normal: 'pts-normal', golden: 'pts-golden', speed: 'pts-speed', slow: 'pts-slow', shrink: 'pts-shrink', hammer: 'pts-hammer', magnet: 'pts-magnet', shield: 'pts-shield' };
+  const ptsInputs = Object.fromEntries(Object.entries(PTS_INPUT_IDS).map(([k, id]) => [k, document.getElementById(id)]));
+  const resetScoringBtn = document.getElementById('reset-scoring-btn');
   const speedrunHint = document.getElementById('speedrun-hint');
   const speedrunWrap = document.getElementById('speedrun-wrap');
   const speedrunElapsedEl = document.getElementById('speedrun-elapsed');
@@ -1300,15 +1455,26 @@
   const optVibration = document.getElementById('opt-vibration');
   const optSoundTheme = document.getElementById('opt-soundtheme');
   const optMusicTrack = document.getElementById('opt-musictrack');
+  const optFanfare = document.getElementById('opt-fanfare');
   const optTwoPlayer = document.getElementById('opt-twoplayer');
   const optVsAI = document.getElementById('opt-vsai');
   const optSkin = document.getElementById('opt-skin');
   const optAppleSkin = document.getElementById('opt-appleskin');
   const optTrail = document.getElementById('opt-trail');
+  const optHat = document.getElementById('opt-hat');
+  const optTournamentBestOf = document.getElementById('opt-tournament-bestof');
   const optGhost = document.getElementById('opt-ghost');
   const optSplitScreen = document.getElementById('opt-splitscreen');
   const optTheme = document.getElementById('opt-theme');
   const optColorblind = document.getElementById('opt-colorblind');
+  const optDailyReminder = document.getElementById('opt-dailyreminder');
+  const colorblindPreviewSwatches = document.querySelectorAll('#colorblind-preview span');
+  function updateColorblindPreview() {
+    colorblindPreviewSwatches.forEach((el, i) => {
+      const isActive = (i === 1) === settings.colorblind;
+      el.style.boxShadow = isActive ? '0 0 0 2px var(--accent)' : 'none';
+    });
+  }
   const optReducedMotion = document.getElementById('opt-reducedmotion');
 
   const openControlsBtn = document.getElementById('open-controls-btn');
@@ -1373,7 +1539,8 @@
       highContrast: false, dyslexiaFont: false, dashEnabled: true, minimapEnabled: true,
       achvVolume: 0.6, seasonalSkins: false, showFps: false, splitScreen: false,
       customDifficulty: { start: 150, floor: 80, step: 3 },
-      weather: 'none', worldTheme: 'none',
+      weather: 'none', worldTheme: 'none', mirrorControls: false, paintTrail: false,
+      customPoints: null, fanfare: 'classic', hat: 'none', perk: 'none', dailyReminder: false, tournamentBestOf: 0,
     },
     safeParse(localStorage.getItem(SETTINGS_KEY))
   );
@@ -1385,12 +1552,13 @@
     gamesPlayed: 0, applesEaten: 0, longestSnake: 3, p1Wins: 0, p2Wins: 0, ties: 0,
     goldenEaten: 0, speedEaten: 0, comboMax: 0, dailyPlays: 0, hardBest: 0, insaneBest: 0, maxLevel: 1,
     aiWins: 0, aiLosses: 0, bossesDefeated: 0, boardsFilled: 0,
-    unlocked: [], scoreHistory: [], deaths: [],
+    unlocked: [], scoreHistory: [], lengthHistory: [], deaths: [],
     loginStreak: 0, lastPlayedDate: '', coins: 0, purchased: [],
     questProgress: { date: '', ids: [], metrics: {}, completed: {} }, questsCompletedTotal: 0,
   }, safeParse(localStorage.getItem(STATS_KEY)));
   if (!Array.isArray(stats.unlocked)) stats.unlocked = [];
   if (!Array.isArray(stats.scoreHistory)) stats.scoreHistory = [];
+  if (!Array.isArray(stats.lengthHistory)) stats.lengthHistory = [];
   if (!Array.isArray(stats.purchased)) stats.purchased = [];
   if (!Array.isArray(stats.deaths)) stats.deaths = [];
   if (!stats.questProgress || typeof stats.questProgress !== 'object') stats.questProgress = { date: '', ids: [], metrics: {}, completed: {} };
@@ -1399,6 +1567,10 @@
   function isSkinUnlocked(id) {
     const s = SKINS[id];
     return !s.unlock || stats.unlocked.includes(s.unlock) || stats.purchased.includes('skin-' + id);
+  }
+  function isHatUnlocked(id) {
+    const h = HATS[id];
+    return !h.unlock || stats.unlocked.includes(h.unlock) || stats.purchased.includes('hat-' + id);
   }
   function isAppleSkinUnlocked(id) {
     const s = APPLE_SKINS[id];
@@ -1452,7 +1624,7 @@
         }
       }
     });
-    if (unlockedNew) { saveStats(); populateSkinSelect(); populateAppleSkinSelect(); populateTrailSelect(); }
+    if (unlockedNew) { saveStats(); populateSkinSelect(); populateAppleSkinSelect(); populateTrailSelect(); populateHatSelect(); }
   }
 
   function checkLoginStreak() {
@@ -1589,6 +1761,21 @@
     if (!isSkinUnlocked(prev)) { settings.skin = 'classic'; saveSettings(); }
   }
 
+  function populateHatSelect() {
+    const prev = settings.hat;
+    optHat.innerHTML = '';
+    Object.keys(HATS).forEach(id => {
+      const opt = document.createElement('option');
+      const unlocked = isHatUnlocked(id);
+      opt.value = id;
+      opt.textContent = unlocked ? HATS[id].name : `🔒 ${HATS[id].name}`;
+      opt.disabled = !unlocked;
+      optHat.appendChild(opt);
+    });
+    optHat.value = isHatUnlocked(prev) ? prev : 'none';
+    if (!isHatUnlocked(prev)) { settings.hat = 'none'; saveSettings(); }
+  }
+
   function populateAppleSkinSelect() {
     const prev = settings.appleSkin;
     optAppleSkin.innerHTML = '';
@@ -1643,11 +1830,14 @@
     sandboxHint.classList.toggle('hidden', settings.mode !== 'sandbox');
     speedrunHint.classList.toggle('hidden', settings.mode !== 'speedrun');
     fillwinHint.classList.toggle('hidden', settings.mode !== 'fillwin');
+    endlessHint.classList.toggle('hidden', settings.mode !== 'endless');
+    rushhourHint.classList.toggle('hidden', settings.mode !== 'rushhour');
+    randomHint.classList.toggle('hidden', settings.mode !== 'random');
     optTwoPlayer.disabled = settings.mode !== 'classic';
     optVsAI.disabled = settings.mode !== 'classic';
     optLayout.disabled = settings.mode !== 'classic';
-    optWrap.disabled = settings.mode === 'zen' || isDailyLikeMode();
-    optWrap.checked = settings.mode === 'zen' ? true : (isDailyLikeMode() ? false : settings.wrap);
+    optWrap.disabled = settings.mode === 'zen' || settings.mode === 'rushhour' || isDailyLikeMode();
+    optWrap.checked = (settings.mode === 'zen' || settings.mode === 'rushhour') ? true : (isDailyLikeMode() ? false : settings.wrap);
     optGrid.disabled = isDailyLikeMode();
     optDifficulty.disabled = isDailyLikeMode();
     optGhost.disabled = settings.twoPlayer && !settings.vsAI;
@@ -1679,6 +1869,7 @@
     optVibration.checked = settings.vibration;
     optSoundTheme.value = settings.soundTheme;
     optMusicTrack.value = settings.musicTrack;
+    optFanfare.value = settings.fanfare;
     optTwoPlayer.checked = settings.twoPlayer;
     optVsAI.checked = settings.vsAI;
     optAiSkill.value = settings.aiSkill;
@@ -1686,12 +1877,21 @@
     optSplitScreen.checked = settings.splitScreen;
     optP1Name.value = settings.p1Name;
     optP2Name.value = settings.p2Name;
+    optTournamentBestOf.value = settings.tournamentBestOf;
+    updateTournamentStatus();
     optHunger.checked = settings.hungerMode;
     optSwarm.checked = settings.swarmMode;
     optFillWin.checked = settings.fillToWin;
+    optMirror.checked = settings.mirrorControls;
+    optPaintTrail.checked = settings.paintTrail;
+    Object.keys(PTS_INPUT_IDS).forEach(type => {
+      ptsInputs[type].value = (settings.customPoints && settings.customPoints[type] != null) ? settings.customPoints[type] : FOOD_TYPES[type].points;
+    });
     optWeather.value = settings.weather;
     optTheme.value = settings.theme;
     optColorblind.checked = settings.colorblind;
+    updateColorblindPreview();
+    optDailyReminder.checked = settings.dailyReminder;
     optReducedMotion.checked = settings.reducedMotion;
     optCustomHead.value = settings.customHead;
     optCustomBody.value = settings.customBody;
@@ -1703,6 +1903,7 @@
     populateSkinSelect();
     populateAppleSkinSelect();
     populateTrailSelect();
+    populateHatSelect();
     populateLayoutSelect();
     updateModeDependentUI();
     updateCustomColorUI();
@@ -1761,6 +1962,20 @@
     boost: () => { playBoostSample(); },
   };
 
+  function playFanfare() {
+    if (muted || settings.fanfare === 'none') return;
+    ensureAudio();
+    const v = settings.achvVolume;
+    if (settings.fanfare === 'epic') {
+      [523, 659, 784, 1047].forEach((f, i) => beep({ freq: f, duration: 0.18, type: 'triangle', volume: v * 0.35, delay: i * 0.11 }));
+    } else if (settings.fanfare === 'chiptune') {
+      [660, 880, 660, 990, 1320].forEach((f, i) => beep({ freq: f, duration: 0.08, type: 'square', volume: v * 0.25, delay: i * 0.08 }));
+    } else {
+      beep({ freq: 440, duration: 0.1, type: 'sine', volume: v * 0.3 });
+      beep({ freq: 660, duration: 0.16, type: 'sine', volume: v * 0.3, delay: 0.1 });
+    }
+  }
+
   muteBtn.addEventListener('click', () => {
     muted = !muted;
     localStorage.setItem(MUTE_KEY, muted ? '1' : '0');
@@ -1795,7 +2010,7 @@
   function effectiveGrid() { return isDailyLikeMode() ? 'medium' : settings.grid; }
   function effectiveDifficultyKey() { return isDailyLikeMode() ? 'normal' : settings.difficulty; }
   function effectiveWrap() {
-    if (settings.mode === 'zen') return true;
+    if (settings.mode === 'zen' || settings.mode === 'rushhour') return true;
     if (isDailyLikeMode()) return false;
     return settings.wrap;
   }
@@ -1846,6 +2061,17 @@
   let lastWindGust = 0, windGustUntil = 0, windGustDir = { x: 0, y: 0 };
   let runStartTime = 0;
   let particles = [];
+  let paintedCells = new Map();
+  let sessionTimelapseFrames = [];
+  function captureSessionFrame() {
+    const size = 150;
+    const off = document.createElement('canvas');
+    off.width = size; off.height = size;
+    const offCtx = off.getContext('2d');
+    offCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, size, size);
+    sessionTimelapseFrames.push(offCtx.getImageData(0, 0, size, size).data);
+    if (sessionTimelapseFrames.length > 40) sessionTimelapseFrames.shift();
+  }
   let combo = { 1: { count: 0, last: 0 }, 2: { count: 0, last: 0 } };
   const COMBO_WINDOW = 3000;
   let timeRemaining = 0, timeInterval = null;
@@ -1853,7 +2079,7 @@
   let lastEatTime = 0, hungerInterval = null;
   const HUNGER_TIMEOUT = 8000;
   let extraFoods = [];
-  let runTrail = [], ghostTrail = null, ghostIndex = 0;
+  let runTrail = [], runScoreTrail = [], ghostTrail = null, ghostIndex = 0;
   let lastRunTrail = [];
   let replayStartTime = 0;
   let splitScores = [], bestSplits = null;
@@ -1903,6 +2129,9 @@
     } else {
       const cx = Math.floor(cols / 2);
       snake = [{ x: cx, y: midY }, { x: cx - 1, y: midY }, { x: cx - 2, y: midY }];
+      if (settings.perk === 'headstart') {
+        for (let i = 3; i < 6; i++) snake.push({ x: cx - i, y: midY });
+      }
       dir = { x: 1, y: 0 };
       snake2 = [];
       dir2 = { x: 0, y: 0 };
@@ -1916,6 +2145,7 @@
     level = 1;
     food = null;
     obstacles = isFillToWinMode() ? [] : (loadCustomLayout() || []);
+    if (settings.mode === 'rushhour') obstacles = buildRushHourLanes();
     frenzyUntil = 0;
     slomoUntil = 0;
     magnetUntil = 0;
@@ -1927,9 +2157,13 @@
     windGustUntil = 0;
     lastWindGust = performance.now();
     particles = [];
+    paintedCells = new Map();
+    rainFoods = [];
+    rainUntil = 0;
     combo = { 1: { count: 0, last: 0 }, 2: { count: 0, last: 0 } };
     speedMs = currentDifficulty().start;
     runTrail = [{ ...snake[0] }];
+    runScoreTrail = [0];
     ghostIndex = 0;
     ghostTrail = (settings.ghost && !isHumanTwoPlayer())
       ? safeParse(localStorage.getItem(GHOST_KEY_PREFIX + settings.mode))
@@ -1997,6 +2231,48 @@
     return { grow: true };
   }
 
+  let rainFoods = [], rainUntil = 0;
+  function triggerAppleRain() {
+    rainFoods = [];
+    const occ = occupiedCells();
+    for (let i = 0; i < 6; i++) {
+      let pos, tries = 0;
+      do {
+        pos = { x: Math.floor(rand() * cols), y: Math.floor(rand() * rows) };
+        tries++;
+      } while ((occ.some(s => s.x === pos.x && s.y === pos.y) || rainFoods.some(f => f.x === pos.x && f.y === pos.y)) && tries < 200);
+      if (tries < 200) rainFoods.push(pos);
+    }
+    rainUntil = performance.now() + 6000;
+    showToast(levelToast, '🍎 Apple Rain! Grab them fast!');
+  }
+  function checkRainFoodEat(head, player) {
+    const idx = rainFoods.findIndex(f => f.x === head.x && f.y === head.y);
+    if (idx < 0) return { grow: false };
+    rainFoods.splice(idx, 1);
+    if (player === 1) lastEatTime = performance.now();
+    addScore(player, 2);
+    spawnParticles(head.x, head.y, '#fbbf24');
+    sfx.eat('golden');
+    if (!attractMode) { stats.applesEaten++; saveStats(); checkAchievements(); }
+    return { grow: true };
+  }
+  function updateRain() {
+    if (rainFoods.length && performance.now() >= rainUntil) rainFoods = [];
+  }
+  function drawRainFoods() {
+    if (!rainFoods.length) return;
+    const bob = settings.reducedMotion ? 0 : Math.sin(performance.now() / 200) * 1.5;
+    rainFoods.forEach(f => {
+      const fx = f.x * CELL + CELL / 2, fy = f.y * CELL + CELL / 2 + bob;
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath(); ctx.arc(fx, fy, CELL / 2 - 4, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#b45309';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(fx, fy, CELL / 2 - 4, 0, Math.PI * 2); ctx.stroke();
+    });
+  }
+
   function placeFood() {
     const occ = occupiedCells();
     let pos, tries = 0;
@@ -2033,9 +2309,19 @@
     return 'normal';
   }
 
+  function buildRushHourLanes() {
+    const lanes = [];
+    for (let y = 1; y < rows - 1; y += 2) {
+      const dir = (Math.floor(y / 2) % 2 === 0) ? 1 : -1;
+      const startX = dir === 1 ? 0 : cols - 1;
+      lanes.push({ x: startX, y, moving: true, vx: dir, vy: 0 });
+    }
+    return lanes;
+  }
+
   function addObstacle(forceMoving) {
-    if (settings.mode === 'zen' || settings.mode === 'sandbox' || isFillToWinMode()) return;
-    if (obstacles.length >= 14) return;
+    if (settings.mode === 'zen' || settings.mode === 'sandbox' || settings.mode === 'rushhour' || isFillToWinMode()) return;
+    if (obstacles.length >= (settings.mode === 'endless' ? 60 : 14)) return;
     const occ = occupiedCells();
     const heads = [snake[0], snake2[0]].filter(Boolean);
     let pos, tries = 0;
@@ -2108,6 +2394,7 @@
         checkAchievements();
         setQuestMetricMax('levelMax', level);
       }
+      if (settings.mode !== 'sandbox' && level % 5 === 0) triggerAppleRain();
     }
   }
 
@@ -2293,6 +2580,13 @@
     if (shieldActive2) effectBadges.innerHTML += '<span class="badge">🛡 P2 Shield</span>';
     if (combo[1].count >= 2) effectBadges.innerHTML += `<span class="badge">🔥 P1 x${Math.min(5, combo[1].count)}</span>`;
     if (settings.twoPlayer && combo[2].count >= 2) effectBadges.innerHTML += `<span class="badge">🔥 P2 x${Math.min(5, combo[2].count)}</span>`;
+    if (settings.ghost && ghostTrail && Array.isArray(ghostTrail.scoreTrail) && gameState === 'playing') {
+      const ghostScore = ghostTrail.scoreTrail[Math.min(ghostIndex, ghostTrail.scoreTrail.length - 1)] || 0;
+      const delta = score - ghostScore;
+      const sign = delta > 0 ? '+' : '';
+      const cls = delta > 0 ? 'style="color:#4ade80"' : delta < 0 ? 'style="color:#f87171"' : '';
+      effectBadges.innerHTML += `<span class="badge">👻 <span ${cls}>${sign}${delta}</span> vs ghost</span>`;
+    }
 
     if (combo[1].count >= 2 && gameState === 'playing') {
       comboMeter.classList.remove('hidden');
@@ -2499,7 +2793,35 @@
     };
   }
 
-  function renderSnake(snakeArr, prevArr, curDir, nxtDir, colors, alpha) {
+  function drawHat(hatId, hx, hy) {
+    if (!hatId || hatId === 'none') return;
+    ctx.save();
+    ctx.translate(hx, hy - CELL / 2 - 1);
+    if (hatId === 'party') {
+      ctx.fillStyle = '#f472b6';
+      ctx.beginPath();
+      ctx.moveTo(-5, 4); ctx.lineTo(5, 4); ctx.lineTo(0, -8); ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#fde047';
+      ctx.beginPath(); ctx.arc(0, -8, 1.6, 0, Math.PI * 2); ctx.fill();
+    } else if (hatId === 'crown') {
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.moveTo(-6, 4); ctx.lineTo(-6, -1); ctx.lineTo(-3, 2); ctx.lineTo(0, -4); ctx.lineTo(3, 2); ctx.lineTo(6, -1); ctx.lineTo(6, 4); ctx.closePath();
+      ctx.fill();
+    } else if (hatId === 'halo') {
+      ctx.strokeStyle = '#fde68a';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.ellipse(0, -5, 5, 2, 0, 0, Math.PI * 2); ctx.stroke();
+    } else if (hatId === 'cap') {
+      ctx.fillStyle = '#3b82f6';
+      ctx.beginPath(); ctx.arc(0, 2, 5, Math.PI, 0); ctx.fill();
+      ctx.fillRect(-1, -1, 7, 2);
+    }
+    ctx.restore();
+  }
+
+  function renderSnake(snakeArr, prevArr, curDir, nxtDir, colors, alpha, isP1) {
     const n = snakeArr.length;
     if (n === 0) return;
     const points = new Array(n);
@@ -2617,6 +2939,8 @@
         ctx.beginPath(); ctx.arc(eyeX - ex * 0.6, eyeY - ey * 0.6, 0.8, 0, Math.PI * 2); ctx.fill();
       }
     });
+
+    if (isP1) drawHat(settings.hat, hx, hy);
 
     if (gameState === 'playing' && !settings.reducedMotion) {
       const flick = Math.sin(performance.now() / 90) > 0.4;
@@ -2758,16 +3082,27 @@
     ctx.fillRect(0, 0, cssSize, cssSize);
   }
 
+  function drawPaintedTrail() {
+    if (!paintedCells.size) return;
+    paintedCells.forEach((color, key) => {
+      const [x, y] = key.split(',').map(Number);
+      ctx.fillStyle = color;
+      ctx.fillRect(x * CELL + 1, y * CELL + 1, CELL - 2, CELL - 2);
+    });
+  }
+
   function drawWorldContents(alpha) {
     if (settings.gridLinesEnabled) drawGrid();
+    if (settings.paintTrail) drawPaintedTrail();
     if (isUltra()) drawUltraShadows();
     drawObstacles();
     drawFood();
     drawExtraFoods();
+    drawRainFoods();
     if (settings.ghost && !isHumanTwoPlayer()) drawGhost();
     if (isUltra()) drawUltraBloom();
 
-    renderSnake(snake, prevSnake, dir, dirQueue1[0] || dir, getP1Colors(), alpha);
+    renderSnake(snake, prevSnake, dir, dirQueue1[0] || dir, getP1Colors(), alpha, true);
     if (hasSecondSnake()) {
       const p2Colors = { head: getCss('--p2-head'), light: getCss('--p2-light'), dark: getCss('--p2-dark') };
       renderSnake(snake2, prevSnake2, dir2, dirQueue2[0] || dir2, p2Colors, alpha);
@@ -2983,7 +3318,7 @@
         best = score;
         bestEl.textContent = best;
         localStorage.setItem(BEST_KEY, best);
-        if (!beatBestThisRun) { beatBestThisRun = true; spawnConfetti(); }
+        if (!beatBestThisRun) { beatBestThisRun = true; spawnConfetti(); playFanfare(); }
       }
       setQuestMetricMax('scoreMax', score);
     } else {
@@ -3021,7 +3356,8 @@
     c.last = now;
     const comboMultiplier = Math.min(5, c.count);
 
-    addScore(player, info.points * frenzyMultiplier * comboMultiplier);
+    const basePoints = (settings.customPoints && settings.customPoints[type] != null) ? settings.customPoints[type] : info.points;
+    addScore(player, basePoints * frenzyMultiplier * comboMultiplier);
     spawnParticles(food.x, food.y, info.ring || getCss('--food'));
     sfx.eat(type);
     vibrate(20);
@@ -3090,6 +3426,7 @@
     updateObstacles();
     updateFoodMagnet();
     updateWeather();
+    updateRain();
 
     const now0 = performance.now();
     const stunned1 = now0 < stun1Until;
@@ -3143,11 +3480,16 @@
     prevSnake = snake.map(s => ({ ...s }));
     if (!stunned1 && !shieldSaved1) {
       if (!twoP) spawnTrailEffect(prevSnake[0].x, prevSnake[0].y);
+      if (settings.paintTrail && !attractMode) {
+        const hue = Math.round(performance.now() / 20) % 360;
+        paintedCells.set(head1.x + ',' + head1.y, `hsl(${hue},75%,55%)`);
+      }
       snake.unshift(head1);
       const lenBefore = snake.length;
       const ate1 = eatIfPossible(head1, 1);
       const ateExtra1 = !ate1.grow ? checkExtraFoodEat(head1, 1) : { grow: false };
-      if (!ate1.grow && !ateExtra1.grow) snake.pop();
+      const ateRain1 = (!ate1.grow && !ateExtra1.grow) ? checkRainFoodEat(head1, 1) : { grow: false };
+      if (!ate1.grow && !ateExtra1.grow && !ateRain1.grow) snake.pop();
       for (let i = 0; i < ate1.extraShrink; i++) if (snake.length > 3) snake.pop();
       if (!attractMode && !twoP && Math.floor(snake.length / 10) > Math.floor(lenBefore / 10)) {
         spawnParticles(head1.x, head1.y, getCss('--accent'));
@@ -3163,6 +3505,7 @@
 
       if (!twoP) {
         runTrail.push({ ...head1 });
+        runScoreTrail.push(score);
         ghostIndex++;
       }
     }
@@ -3275,8 +3618,13 @@
       sandbox: 'No death, no obstacles. Press 1-8 to spawn apple types on demand.',
       speedrun: `Race to score ${SPEEDRUN_TARGET} as fast as you can!`,
       fillwin: 'No rocks ever spawn — fill the entire board with your snake to win!',
+      endless: 'Hazards escalate forever with no obstacle cap — how long can you last?',
+      rushhour: 'Nonstop moving traffic lanes — time your crossings!',
+      random: 'Grid, difficulty, wrap and weather are randomized for this run!',
     };
     overlayMsg.textContent = modeHint[settings.mode] || modeHint.classic;
+    updateAchvSpotlight();
+    perkSelectRow.classList.remove('hidden');
     highscoreEntry.classList.add('hidden');
     overlayActions.classList.remove('hidden');
     copyScoreBtn.classList.add('hidden');
@@ -3319,6 +3667,7 @@
     overlayMsg.textContent = 'Press Space to resume';
     highscoreEntry.classList.add('hidden');
     overlayActions.classList.add('hidden');
+    perkSelectRow.classList.add('hidden');
     overlay.classList.remove('hidden');
   }
 
@@ -3343,6 +3692,8 @@
     if (mode === 'sandbox') return 'snake-highscores-sandbox-v1';
     if (mode === 'speedrun') return 'snake-highscores-speedrun-v1';
     if (mode === 'fillwin') return 'snake-highscores-fillwin-v1';
+    if (mode === 'endless') return 'snake-highscores-endless-v1';
+    if (mode === 'rushhour') return 'snake-highscores-rushhour-v1';
     if (mode === 'classic' && !isHumanTwoPlayer() && !settings.vsAI) return SCORES_KEY + '-' + settings.grid;
     return SCORES_KEY;
   }
@@ -3370,6 +3721,8 @@
       'snake-highscores-zen-v1': 'Zen — Best Runs',
       'snake-highscores-boss-v1': 'Boss Challenge — Best Runs',
       'snake-highscores-fillwin-v1': 'Fill to Win — Best Runs',
+      'snake-highscores-endless-v1': 'Endless — Best Runs',
+      'snake-highscores-rushhour-v1': 'Rush Hour — Best Runs',
     };
     let fallbackTitle = "Today's Attempts";
     if (key.startsWith('snake-highscores-weekly-')) fallbackTitle = "This Week's Attempts";
@@ -3389,12 +3742,35 @@
     return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
+  let tournamentSeries = null;
+  const tournamentStatusEl = document.getElementById('tournament-status');
+  function updateTournamentStatus() {
+    if (!settings.tournamentBestOf) { tournamentStatusEl.textContent = ''; return; }
+    if (!tournamentSeries) { tournamentStatusEl.textContent = `Best of ${settings.tournamentBestOf} — series not started yet. Play a 2-player or vs AI round to begin.`; return; }
+    const needed = Math.ceil((settings.tournamentBestOf + 1) / 2);
+    tournamentStatusEl.textContent = `Series: ${tournamentSeries.p1}-${tournamentSeries.p2} (first to ${needed})`;
+  }
+  function recordTournamentResult(winner) {
+    const bestOf = settings.tournamentBestOf;
+    if (!bestOf) return null;
+    if (!tournamentSeries || tournamentSeries.bestOf !== bestOf) tournamentSeries = { p1: 0, p2: 0, bestOf };
+    if (winner === 1) tournamentSeries.p1++;
+    else if (winner === 2) tournamentSeries.p2++;
+    const needed = Math.ceil((bestOf + 1) / 2);
+    const p1 = tournamentSeries.p1, p2 = tournamentSeries.p2;
+    const matchOver = p1 >= needed || p2 >= needed;
+    const winnerLabel = p1 >= needed ? (settings.vsAI ? 'You' : (settings.p1Name || 'Player 1')) : (settings.vsAI ? 'AI' : (settings.p2Name || 'Player 2'));
+    if (matchOver) tournamentSeries = null;
+    updateTournamentStatus();
+    return { p1, p2, matchOver, winnerLabel };
+  }
+
   function maybeSaveGhost() {
     if (isHumanTwoPlayer()) return;
     const key = GHOST_KEY_PREFIX + settings.mode;
     const existing = safeParse(localStorage.getItem(key));
     if (!existing || !existing.score || score >= existing.score) {
-      localStorage.setItem(key, JSON.stringify({ score, trail: runTrail }));
+      localStorage.setItem(key, JSON.stringify({ score, trail: runTrail, scoreTrail: runScoreTrail }));
     }
   }
 
@@ -3574,6 +3950,16 @@
     }
   }
   exportGifBtn.addEventListener('click', exportReplayGif);
+  exportArtBtn.addEventListener('click', () => {
+    draw(1);
+    const url = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `snake-art-${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  });
 
   function startReplay(returnState) {
     if (lastRunTrail.length < 2) return;
@@ -3626,10 +4012,11 @@
     clearInterval(hungerInterval);
     clearInterval(speedrunInterval);
     zenStopBtn.classList.add('hidden');
+    perkSelectRow.classList.add('hidden');
     shakeUntil = performance.now() + 400;
     stopMusic();
     sfx.gameOver();
-    if (!attractMode) vibrate([50, 30, 50]);
+    if (!attractMode) { vibrate([50, 30, 50]); captureSessionFrame(); }
 
     overlayActions.classList.remove('hidden');
     startBtn.textContent = 'Play Again';
@@ -3647,8 +4034,11 @@
       else { title = 'Player 1 Wins!'; stats.p1Wins++; }
       saveStats();
       checkAchievements();
-      overlayTitle.textContent = title;
+      const winner = (dead1 && dead2) ? null : (dead1 ? 2 : 1);
+      const matchResult = recordTournamentResult(winner);
+      overlayTitle.textContent = matchResult && matchResult.matchOver ? `${matchResult.winnerLabel} wins the match!` : title;
       overlayMsg.textContent = settings.vsAI ? `You: ${score} · AI: ${score2}` : `P1: ${score} · P2: ${score2}`;
+      if (matchResult) overlayMsg.textContent += ` — Series: ${matchResult.p1}-${matchResult.p2}`;
       highscoreEntry.classList.add('hidden');
       copyLinkBtn.classList.add('hidden');
       qrCanvas.classList.add('hidden');
@@ -3664,6 +4054,7 @@
       else overlayTitle.textContent = 'Game Over';
       if (reason === 'fillwin') {
         spawnConfetti();
+        if (!attractMode) playFanfare();
         if (!attractMode) {
           stats.boardsFilled = (stats.boardsFilled || 0) + 1;
           saveStats();
@@ -3714,6 +4105,8 @@
       if (settings.mode === 'classic' && !attractMode) {
         stats.scoreHistory.push(score);
         stats.scoreHistory = stats.scoreHistory.slice(-20);
+        stats.lengthHistory.push(snake.length);
+        stats.lengthHistory = stats.lengthHistory.slice(-20);
         saveStats();
       }
 
@@ -3724,6 +4117,7 @@
       lastRunTrail = attractMode ? [] : runTrail.slice();
       watchReplayBtn.classList.toggle('hidden', lastRunTrail.length < 2);
       exportGifBtn.classList.toggle('hidden', lastRunTrail.length < 2);
+      exportArtBtn.classList.toggle('hidden', !(settings.paintTrail && paintedCells.size > 0));
       scorecardBtn.classList.toggle('hidden', attractMode || score <= 0);
 
       pendingScoreKey = scoreKeyForMode(settings.mode);
@@ -4140,8 +4534,20 @@
     setTimeout(() => runCountdown(n - 1, done), 650);
   }
 
+  function randomizeRunSettings() {
+    const grids = Object.keys(GRID_SIZES);
+    const diffs = ['easy', 'normal', 'hard', 'insane'];
+    const weathers = ['none', 'wind', 'fog'];
+    settings.grid = grids[Math.floor(Math.random() * grids.length)];
+    settings.difficulty = diffs[Math.floor(Math.random() * diffs.length)];
+    settings.wrap = Math.random() < 0.5;
+    settings.weather = weathers[Math.floor(Math.random() * weathers.length)];
+    saveSettings();
+  }
+
   function startGame() {
     ensureAudio();
+    if (settings.mode === 'random') randomizeRunSettings();
     reset();
     gameState = 'countdown';
     draw(1);
@@ -4153,6 +4559,8 @@
       bgmAudio.currentTime = 0;
       startMusic();
       zenStopBtn.classList.toggle('hidden', settings.mode !== 'zen');
+      if (settings.perk === 'extralife' && !hasSecondSnake()) shieldActive1 = true;
+      if (settings.perk === 'quickstart' && !hasSecondSnake()) frenzyUntil = performance.now() + 3000;
       stats.gamesPlayed++;
       if (settings.mode === 'daily') stats.dailyPlays++;
       saveStats();
@@ -4208,6 +4616,8 @@
     });
   }
 
+  perkSelect.value = settings.perk;
+  perkSelect.addEventListener('change', e => { settings.perk = e.target.value; saveSettings(); });
   startBtn.addEventListener('click', startGame);
   viewScoresBtn.addEventListener('click', () => {
     const key = scoreKeyForMode(settings.mode);
@@ -4269,13 +4679,36 @@
   optVibration.addEventListener('change', e => { settings.vibration = e.target.checked; saveSettings(); });
   optSoundTheme.addEventListener('change', e => { settings.soundTheme = e.target.value; saveSettings(); });
   optMusicTrack.addEventListener('change', e => { settings.musicTrack = e.target.value; saveSettings(); applyMusicTrack(); });
+  optFanfare.addEventListener('change', e => { settings.fanfare = e.target.value; saveSettings(); playFanfare(); });
   optSkin.addEventListener('change', e => { settings.skin = e.target.value; saveSettings(); updateCustomColorUI(); });
   optAppleSkin.addEventListener('change', e => { settings.appleSkin = e.target.value; saveSettings(); });
   optTrail.addEventListener('change', e => { settings.trailEffect = e.target.value; saveSettings(); });
+  optHat.addEventListener('change', e => { settings.hat = e.target.value; saveSettings(); });
+  optTournamentBestOf.addEventListener('change', e => {
+    settings.tournamentBestOf = Number(e.target.value) || 0;
+    tournamentSeries = null;
+    saveSettings();
+    updateTournamentStatus();
+  });
+  document.getElementById('tournament-reset-btn').addEventListener('click', () => { tournamentSeries = null; updateTournamentStatus(); });
   optGhost.addEventListener('change', e => { settings.ghost = e.target.checked; saveSettings(); });
   optSplitScreen.addEventListener('change', e => { settings.splitScreen = e.target.checked; saveSettings(); });
   optTheme.addEventListener('change', e => { settings.theme = e.target.value; saveSettings(); applyTheme(); });
-  optColorblind.addEventListener('change', e => { settings.colorblind = e.target.checked; saveSettings(); applyColorblind(); });
+  optColorblind.addEventListener('change', e => { settings.colorblind = e.target.checked; saveSettings(); applyColorblind(); updateColorblindPreview(); });
+  optDailyReminder.addEventListener('change', e => {
+    settings.dailyReminder = e.target.checked;
+    saveSettings();
+    if (settings.dailyReminder && typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  });
+  function checkDailyReminder() {
+    if (!settings.dailyReminder) return;
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    const today = new Date().toISOString().slice(0, 10);
+    if (stats.lastPlayedDate === today) return;
+    try { new Notification('Snake', { body: "Today's Daily Challenge is ready — come get your streak!" }); } catch { /* notifications unavailable in this context */ }
+  }
   optReducedMotion.addEventListener('change', e => { settings.reducedMotion = e.target.checked; saveSettings(); });
   optHighContrast.addEventListener('change', e => { settings.highContrast = e.target.checked; saveSettings(); applyTheme(); });
   optDyslexiaFont.addEventListener('change', e => { settings.dyslexiaFont = e.target.checked; saveSettings(); applyDyslexiaFont(); });
@@ -4285,6 +4718,22 @@
   optHunger.addEventListener('change', e => { settings.hungerMode = e.target.checked; saveSettings(); });
   optSwarm.addEventListener('change', e => { settings.swarmMode = e.target.checked; saveSettings(); });
   optFillWin.addEventListener('change', e => { settings.fillToWin = e.target.checked; saveSettings(); });
+  optMirror.addEventListener('change', e => { settings.mirrorControls = e.target.checked; saveSettings(); });
+  optPaintTrail.addEventListener('change', e => { settings.paintTrail = e.target.checked; saveSettings(); });
+  Object.keys(PTS_INPUT_IDS).forEach(type => {
+    ptsInputs[type].addEventListener('change', e => {
+      if (!settings.customPoints) settings.customPoints = {};
+      const v = Math.max(0, Math.min(99, Math.round(Number(e.target.value) || 0)));
+      settings.customPoints[type] = v;
+      e.target.value = v;
+      saveSettings();
+    });
+  });
+  resetScoringBtn.addEventListener('click', () => {
+    settings.customPoints = null;
+    saveSettings();
+    populateSettingsUI();
+  });
   optWeather.addEventListener('change', e => { settings.weather = e.target.value; saveSettings(); });
   optAiSkill.addEventListener('change', e => { settings.aiSkill = e.target.value; saveSettings(); });
   optP1Name.addEventListener('input', e => { settings.p1Name = e.target.value.slice(0, 12); saveSettings(); });
@@ -4319,6 +4768,20 @@
   controlsClose.addEventListener('click', () => controlsModal.classList.add('hidden'));
 
   // ---------- achievements modal ----------
+  function updateAchvSpotlight() {
+    const locked = ACHIEVEMENTS.filter(a => !stats.unlocked.includes(a.id) && a.progress);
+    if (!locked.length) { achvSpotlight.classList.add('hidden'); return; }
+    let best = null, bestRatio = -1;
+    locked.forEach(a => {
+      const [cur, target] = a.progress(stats);
+      const ratio = target > 0 ? cur / target : 0;
+      if (ratio > bestRatio && ratio < 1) { bestRatio = ratio; best = { a, cur, target }; }
+    });
+    if (!best || bestRatio <= 0) { achvSpotlight.classList.add('hidden'); return; }
+    achvSpotlight.textContent = `🏆 Almost there: ${best.a.name} (${Math.min(best.cur, best.target)}/${best.target})`;
+    achvSpotlight.classList.remove('hidden');
+  }
+
   function renderAchievements() {
     achvList.innerHTML = '';
     ACHIEVEMENTS.forEach(a => {
@@ -4345,6 +4808,151 @@
   }
   openAchvBtn.addEventListener('click', () => { renderAchievements(); achvModal.classList.remove('hidden'); });
   achvClose.addEventListener('click', () => achvModal.classList.add('hidden'));
+
+  function exportCertificate() {
+    const W = 900, H = 640;
+    const off = document.createElement('canvas');
+    off.width = W; off.height = H;
+    const c = off.getContext('2d');
+    const bg = c.createLinearGradient(0, 0, W, H);
+    bg.addColorStop(0, '#0f172a');
+    bg.addColorStop(1, '#1e293b');
+    c.fillStyle = bg;
+    c.fillRect(0, 0, W, H);
+    c.strokeStyle = '#fbbf24';
+    c.lineWidth = 6;
+    c.strokeRect(20, 20, W - 40, H - 40);
+    c.strokeStyle = 'rgba(251,191,36,0.5)';
+    c.lineWidth = 2;
+    c.strokeRect(32, 32, W - 64, H - 64);
+    c.textAlign = 'center';
+    c.fillStyle = '#fbbf24';
+    c.font = 'bold 42px Georgia, serif';
+    c.fillText('🐍 Certificate of Achievement 🐍', W / 2, 110);
+    c.fillStyle = '#e2e8f0';
+    c.font = '20px Georgia, serif';
+    c.fillText('This certifies that a Snake player has achieved:', W / 2, 160);
+    c.fillStyle = '#fff';
+    c.font = 'bold 28px Georgia, serif';
+    c.fillText(`${stats.unlocked.length} / ${ACHIEVEMENTS.length} Achievements Unlocked`, W / 2, 205);
+
+    const rows = [
+      [`Best score (Classic)`, best],
+      [`Longest snake`, stats.longestSnake],
+      [`Apples eaten`, stats.applesEaten],
+      [`Bosses defeated`, stats.bossesDefeated || 0],
+    ];
+    c.font = '18px Georgia, serif';
+    c.fillStyle = '#cbd5e1';
+    rows.forEach(([label, val], i) => {
+      c.textAlign = 'right';
+      c.fillText(label + ':', W / 2 - 10, 250 + i * 28);
+      c.textAlign = 'left';
+      c.fillStyle = '#fbbf24';
+      c.fillText(String(val), W / 2 + 10, 250 + i * 28);
+      c.fillStyle = '#cbd5e1';
+    });
+
+    c.textAlign = 'left';
+    c.fillStyle = '#fde68a';
+    c.font = 'bold 18px Georgia, serif';
+    c.fillText('Recent unlocks:', 60, 400);
+    c.font = '16px Georgia, serif';
+    c.fillStyle = '#e2e8f0';
+    const recent = stats.unlocked.slice(-8);
+    recent.forEach((id, i) => {
+      const a = ACHIEVEMENTS.find(x => x.id === id);
+      if (!a) return;
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      c.fillText('🏆 ' + a.name, 60 + col * 400, 430 + row * 28);
+    });
+
+    c.textAlign = 'center';
+    c.fillStyle = '#94a3b8';
+    c.font = '14px Georgia, serif';
+    c.fillText(new Date().toLocaleDateString(), W / 2, H - 50);
+
+    const url = off.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `snake-certificate-${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+  document.getElementById('export-certificate-btn').addEventListener('click', exportCertificate);
+
+  // ---------- apple encyclopedia ----------
+  const encyclopediaModal = document.getElementById('encyclopedia-modal');
+  const encyclopediaList = document.getElementById('encyclopedia-list');
+  function renderEncyclopedia() {
+    encyclopediaList.innerHTML = '';
+    Object.keys(FOOD_TYPES).forEach(type => {
+      const info = FOOD_TYPES[type];
+      const li = document.createElement('li');
+      li.className = 'achv-row';
+      const glyph = info.glyph || '🍎';
+      const name = type.charAt(0).toUpperCase() + type.slice(1);
+      li.innerHTML = `<div class="achv-row-head"><span>${glyph}</span><span class="achv-name">${escapeHtml(name)}</span></div><div class="achv-progress-label">${escapeHtml(FOOD_DESCRIPTIONS[type] || '')}</div>`;
+      encyclopediaList.appendChild(li);
+    });
+  }
+  document.getElementById('open-encyclopedia-btn').addEventListener('click', () => { renderEncyclopedia(); encyclopediaModal.classList.remove('hidden'); });
+  document.getElementById('encyclopedia-close').addEventListener('click', () => encyclopediaModal.classList.add('hidden'));
+
+  // ---------- profiles ----------
+  const profilesModal = document.getElementById('profiles-modal');
+  const profilesList = document.getElementById('profiles-list');
+  const newProfileInput = document.getElementById('new-profile-input');
+  function renderProfiles() {
+    const list = listProfiles();
+    const active = activeProfile();
+    profilesList.innerHTML = '';
+    list.forEach(name => {
+      const isActive = name === active;
+      const li = document.createElement('li');
+      li.className = 'achv-row';
+      li.innerHTML = `<div class="achv-row-head"><span>${isActive ? '●' : '○'}</span><span class="achv-name">${escapeHtml(name)}</span>${isActive ? '<span>(active)</span>' : ''}</div>`;
+      if (!isActive) {
+        const btnRow = document.createElement('div');
+        btnRow.className = 'link-row';
+        const switchBtn = document.createElement('button');
+        switchBtn.className = 'tiny';
+        switchBtn.textContent = 'Switch';
+        switchBtn.addEventListener('click', () => { localStorage.setItem(ACTIVE_PROFILE_KEY, name); location.reload(); });
+        btnRow.appendChild(switchBtn);
+        if (name !== 'Default') {
+          const delBtn = document.createElement('button');
+          delBtn.className = 'tiny danger';
+          delBtn.textContent = 'Delete';
+          delBtn.addEventListener('click', () => {
+            if (!confirm(`Delete profile "${name}" and all its data? This cannot be undone.`)) return;
+            const prefix = 'p_' + name + '__';
+            Object.keys(localStorage).filter(k => k.startsWith(prefix)).forEach(k => localStorage.removeItem(k));
+            saveProfilesList(listProfiles().filter(n => n !== name));
+            renderProfiles();
+          });
+          btnRow.appendChild(delBtn);
+        }
+        li.appendChild(btnRow);
+      }
+      profilesList.appendChild(li);
+    });
+  }
+  document.getElementById('open-profiles-btn').addEventListener('click', () => { renderProfiles(); profilesModal.classList.remove('hidden'); });
+  document.getElementById('profiles-close').addEventListener('click', () => profilesModal.classList.add('hidden'));
+  document.getElementById('new-profile-btn').addEventListener('click', () => {
+    const name = newProfileInput.value.trim().slice(0, 16);
+    if (!name) return;
+    const list = listProfiles();
+    if (list.includes(name)) { alert('A profile with that name already exists.'); return; }
+    list.push(name);
+    saveProfilesList(list);
+    newProfileInput.value = '';
+    localStorage.setItem(ACTIVE_PROFILE_KEY, name);
+    location.reload();
+  });
 
   function updateQuestBadge() {
     ensureDailyQuests();
@@ -4417,7 +5025,7 @@
     shopBalance.textContent = stats.coins;
   }
 
-  const SHOP_UNLOCK_CHECK = { skin: isSkinUnlocked, appleskin: isAppleSkinUnlocked, trail: isTrailUnlocked };
+  const SHOP_UNLOCK_CHECK = { skin: isSkinUnlocked, appleskin: isAppleSkinUnlocked, trail: isTrailUnlocked, hat: isHatUnlocked };
   function renderShop() {
     updateCoinDisplays();
     shopList.innerHTML = '';
@@ -4444,6 +5052,7 @@
           populateSkinSelect();
           populateAppleSkinSelect();
           populateTrailSelect();
+          populateHatSelect();
         });
       }
       li.appendChild(label);
@@ -4516,16 +5125,15 @@
     }
   }
 
-  function drawStatsSparkline() {
-    const sctx = statsSparkline.getContext('2d');
-    const w = statsSparkline.width, h = statsSparkline.height;
+  function drawSparklineOn(canvasEl, data, emptyMsg) {
+    const sctx = canvasEl.getContext('2d');
+    const w = canvasEl.width, h = canvasEl.height;
     sctx.clearRect(0, 0, w, h);
-    const data = stats.scoreHistory;
     if (data.length < 2) {
       sctx.fillStyle = getCss('--text-dim');
       sctx.font = '11px system-ui, sans-serif';
       sctx.textAlign = 'center';
-      sctx.fillText('Play a few Classic runs to see a trend here.', w / 2, h / 2 + 4);
+      sctx.fillText(emptyMsg, w / 2, h / 2 + 4);
       return;
     }
     const max = Math.max(1, ...data);
@@ -4546,8 +5154,47 @@
       sctx.beginPath(); sctx.arc(x, y, 2, 0, Math.PI * 2); sctx.fill();
     });
   }
+  function drawStatsSparkline() {
+    drawSparklineOn(statsSparkline, stats.scoreHistory, 'Play a few Classic runs to see a trend here.');
+    drawSparklineOn(lengthSparkline, stats.lengthHistory, 'Play a few runs to see your longest-snake trend here.');
+  }
   openStatsBtn.addEventListener('click', () => { renderStats(); statsModal.classList.remove('hidden'); });
   statsClose.addEventListener('click', () => statsModal.classList.add('hidden'));
+
+  async function exportSessionTimelapse() {
+    if (sessionTimelapseFrames.length < 2) { alert('Play a few games this session first — the time-lapse needs at least 2 game-overs to record.'); return; }
+    const btn = document.getElementById('export-timelapse-btn');
+    const orig = btn.textContent;
+    btn.textContent = 'Rendering…';
+    btn.disabled = true;
+    await new Promise(r => setTimeout(r, 30));
+    try {
+      const size = 150;
+      const palette = buildGifPalette();
+      const indexedFrames = sessionTimelapseFrames.map(rgba => {
+        const idxArr = new Uint8Array(size * size);
+        for (let p = 0; p < idxArr.length; p++) {
+          const o = p * 4;
+          idxArr[p] = quantizeGifIndex(rgba[o], rgba[o + 1], rgba[o + 2]);
+        }
+        return idxArr;
+      });
+      const gifBytes = encodeGif(indexedFrames, size, size, 100, palette);
+      const blob = new Blob([gifBytes], { type: 'image/gif' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `snake-session-${Date.now()}.gif`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } finally {
+      btn.textContent = orig;
+      btn.disabled = false;
+    }
+  }
+  document.getElementById('export-timelapse-btn').addEventListener('click', exportSessionTimelapse);
 
   openGraphicsBtn.addEventListener('click', () => { populateGraphicsUI(); graphicsModal.classList.remove('hidden'); });
   graphicsClose.addEventListener('click', () => graphicsModal.classList.add('hidden'));
@@ -4881,7 +5528,7 @@
     }
     const twoP = hasSecondSnake();
     const d1 = dirForKey(settings.keymap.p1, e.key);
-    if (d1) { trySetDir(1, d1); e.preventDefault(); return; }
+    if (d1) { trySetDir(1, applyMirrorX(d1)); e.preventDefault(); return; }
     if (twoP && !settings.vsAI) {
       const d2 = dirForKey(settings.keymap.p2, e.key);
       if (d2) { trySetDir(2, d2); e.preventDefault(); return; }
@@ -4941,7 +5588,7 @@
     if (!btn.dataset.dir) return;
     btn.addEventListener('click', () => {
       const map = { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
-      trySetDir(1, map[btn.dataset.dir]);
+      trySetDir(1, applyMirrorX(map[btn.dataset.dir]));
     });
   });
   if (dashBtn) dashBtn.addEventListener('click', () => tryDash());
@@ -4984,6 +5631,7 @@
   populateSettingsUI();
   updateCoinDisplays();
   checkLoginStreak();
+  checkDailyReminder();
   updateQuestBadge();
   applyWorldTheme();
   resizeCanvasIfNeeded();
