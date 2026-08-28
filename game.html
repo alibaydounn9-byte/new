@@ -2705,13 +2705,17 @@
 
   function drawFood() {
     if (!food) return;
-    const info = FOOD_TYPES[food.type] || FOOD_TYPES.normal;
-    const isGolden = food.type === 'golden';
+    drawAppleAt(food);
+  }
+
+  function drawAppleAt(item) {
+    const info = FOOD_TYPES[item.type] || FOOD_TYPES.normal;
+    const isGolden = item.type === 'golden';
     const bob = settings.reducedMotion ? 0 : Math.sin(performance.now() / 260) * 1.2;
     const pulse = settings.reducedMotion ? 1 : 1 + Math.sin(performance.now() / 220) * 0.07;
     const wiggle = settings.reducedMotion ? 0 : Math.sin(performance.now() / 340) * 0.06;
-    const fx = food.x * CELL + CELL / 2;
-    const fy = food.y * CELL + CELL / 2 + bob;
+    const fx = item.x * CELL + CELL / 2;
+    const fy = item.y * CELL + CELL / 2 + bob;
     const appleR = (CELL / 2 - 3) * pulse;
     ctx.save();
     ctx.translate(fx, fy);
@@ -3036,14 +3040,7 @@
   }
 
   function drawExtraFoods() {
-    extraFoods.forEach(f => {
-      const fx = f.x * CELL + CELL / 2, fy = f.y * CELL + CELL / 2;
-      const r = CELL / 2 - 5;
-      ctx.fillStyle = getCss('--gold');
-      ctx.beginPath(); ctx.arc(fx, fy, r, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
-      ctx.beginPath(); ctx.arc(fx - r * 0.3, fy - r * 0.3, r * 0.35, 0, Math.PI * 2); ctx.fill();
-    });
+    extraFoods.forEach(f => drawAppleAt(f));
   }
 
   function drawNameTags() {
@@ -3683,6 +3680,7 @@
     highscoreEntry.classList.add('hidden');
     overlayActions.classList.add('hidden');
     perkSelectRow.classList.add('hidden');
+    achvSpotlight.classList.add('hidden');
     overlay.classList.remove('hidden');
   }
 
@@ -4028,6 +4026,7 @@
     clearInterval(speedrunInterval);
     zenStopBtn.classList.add('hidden');
     perkSelectRow.classList.add('hidden');
+    achvSpotlight.classList.add('hidden');
     shakeUntil = performance.now() + 400;
     stopMusic();
     sfx.gameOver();
